@@ -1,0 +1,11 @@
+/.git
+/.vscode
+/cache
+/logs
+/quant_db_chroma
+/quant_forum_bgem3
+/quant_forum_chroma
+/wqb_embedding_db
+/wqbagentvenv
+/config/__pycache__
+/config
