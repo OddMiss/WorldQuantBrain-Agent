@@ -74,7 +74,7 @@ Embeddings are stored in `embedding_db/wqb_embedding_db` (gitignored). Ingest tr
 - force UTF-8 output
 - pipe ANSI output to HTML using `ansi2html`
 
-Update the venv path and the Python entry point to match an available script like `wqbagent_embedding.py` or `wqbagent_output_test.py`, or your notebook export.
+Update the venv path and the Python entry point to match an available script like `wqbagent_embedding.py` or `wqbagent_output_test.py`, or your notebook export. In the `.bat` files, edit the venv activation line and the `python -u` command; in the PowerShell script, edit `$venvActivate` and `$pythonScript`.
 
 ## Generated files
 
