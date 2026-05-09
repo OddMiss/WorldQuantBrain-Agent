@@ -4,13 +4,13 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
 
 ## Repository contents
 
-- `wqbagent_embedding.py` — builds/updates a Chroma vector store from PDF/text sources and exposes the `retrieve_text_data` tool.
-- `wqbagent_output_test.py` — minimal CrewAI pipeline for validating terminal colors/logging and LLM connectivity.
-- `wqbquant_searchtool_test.py` — health check helper for search/retrieval tools.
-- `wqbagent-v2.ipynb`, `wqbagent-terminal.ipynb` — notebooks for interactive development and experiments.
-- `releases/` — archived v1 artifacts.
-- `scripts/` — Windows batch/PowerShell launchers (paths and entrypoints need to be customized).
-- `requirements.txt` — Python dependencies.
+- `wqbagent_embedding.py`: builds/updates a Chroma vector store from PDF/text sources and exposes the `retrieve_text_data` tool.
+- `wqbagent_output_test.py`: minimal CrewAI pipeline for validating terminal colors/logging and LLM connectivity.
+- `wqbquant_searchtool_test.py`: health check helper for search/retrieval tools.
+- `wqbagent-v2.ipynb`, `wqbagent-terminal.ipynb`: notebooks for interactive development and experiments.
+- `releases/`: archived v1 artifacts.
+- `scripts/`: Windows batch/PowerShell launchers (paths and entry points need to be customized).
+- `requirements.txt`: Python dependencies.
 
 ## Prerequisites
 
@@ -74,7 +74,7 @@ Embeddings are stored in `embedding_db/wqb_embedding_db` (gitignored). Ingest tr
 - force UTF-8 output
 - pipe ANSI output to HTML using `ansi2html`
 
-Update the venv path and the Python entry point to match a tracked script like `wqbagent_embedding.py` or `wqbagent_output_test.py`, or your notebook export.
+Update the venv path and the Python entry point to match an available script like `wqbagent_embedding.py` or `wqbagent_output_test.py`, or your notebook export.
 
 ## Generated files
 
