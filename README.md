@@ -50,7 +50,7 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
 
 3. Re-comment the ingestion lines after the DB is built to avoid reprocessing.
 
-Embeddings are stored under `embedding_db/` (default subfolder `wqb_embedding_db`, gitignored). Ingest tracking is stored as `ingested_files.json` inside each docs folder.
+Embeddings are stored under `embedding_db/` (default subfolder `wqb_embedding_db`, gitignored). If you configure a separate root-level `wqb_embedding_db/`, it is also ignored. Ingest tracking is stored as `ingested_files.json` inside each docs folder.
 
 ## Run utilities
 
@@ -60,7 +60,7 @@ Embeddings are stored under `embedding_db/` (default subfolder `wqb_embedding_db
   python .\wqbagent_output_test.py
   ```
 
-- Search tool health check (requires you to wire in the tools/LLM from your pipeline):
+- Search tool health check (import `test_agents` and pass your tool functions plus the LLM instance from your pipeline):
 
   ```powershell
   python .\wqbquant_searchtool_test.py
@@ -85,7 +85,8 @@ The following are created at runtime and are excluded from git:
 
 - `logs/` (run logs)
 - `cache/` (HF/transformers cache)
-- `embedding_db/` and `wqb_embedding_db/` (vector store data)
+- `embedding_db/` (default vector store; includes `wqb_embedding_db` by default)
+- `wqb_embedding_db/` (optional root-level vector store if configured separately)
 - `quant_forum_chroma/`, `quant_forum_bgem3/` (legacy vector stores from earlier versions)
 
 ## License
