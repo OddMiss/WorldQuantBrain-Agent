@@ -15,7 +15,7 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
 ## Prerequisites
 
 - Python 3.10+
-- Windows recommended for the provided launch scripts (they can be adapted for other OSes)
+- Windows recommended for the provided launch scripts (they can be adapted for other OSs)
 - Access to an OpenAI-compatible LLM endpoint
 
 ## Setup
@@ -74,7 +74,7 @@ Embeddings are stored in `embedding_db/wqb_embedding_db` (gitignored). Ingest tr
 - force UTF-8 output
 - pipe ANSI output to HTML using `ansi2html`
 
-Update the venv path and the Python entrypoint (the default points to `wqbagent_v2.py`, which is not tracked in this repo) to match your local script or notebook export.
+Update the venv path and the Python entrypoint (the current scripts reference a local `wqbagent_v2.py`) to match a tracked script like `wqbagent_embedding.py` or `wqbagent_output_test.py` or your notebook export.
 
 ## Generated files
 
