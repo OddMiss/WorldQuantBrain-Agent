@@ -14,9 +14,9 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
 
 ## Prerequisites
 
-- Python 3.10+
-- Windows recommended for the provided launch scripts; they can be adapted for other operating systems
-- Access to an OpenAI-compatible LLM endpoint
+- Python 3.10+.
+- Windows recommended for the provided launch scripts; they can be adapted for other operating systems.
+- Access to an OpenAI-compatible LLM endpoint.
 
 ## Setup
 
