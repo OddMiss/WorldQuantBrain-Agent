@@ -1,141 +1,90 @@
 # WorldQuantBrain-Agent
 
-A local multi-agent research pipeline for generating WorldQuant Brain alpha ideas from consultant forum PDFs.
+Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consultant materials and experimenting with multi-agent alpha idea generation. The repo includes a standalone embedding builder, test utilities, and notebooks for interactive development.
 
-This project uses CrewAI agents, a local/remote OpenAI-compatible LLM endpoint, and a Chroma vector database built from PDF documents.
+## Repository contents
 
-## What this project does
-
-- Ingests WorldQuant-related forum PDFs into a vector database.
-- Retrieves relevant discussion content with semantic search.
-- Runs a sequential multi-agent workflow to:
-  - research forum content,
-  - propose low-correlation alpha ideas,
-  - convert the best idea into a Brain expression,
-  - validate and format final output.
-- Writes run logs to the `logs` folder.
-
-## Project structure
-
-- `wqbagent_v2.py`: main pipeline script with logging + retrieval + multi-agent workflow.
-- `wqbagent_v1.py`: earlier pipeline version.
-- `wqbagent_test.py`: lightweight test runner for terminal/color/log pipeline checks.
-- `scripts/wqbagent.bat`: Windows batch launcher for main run.
-- `scripts/wqbagent_test.bat`: Windows batch launcher for test run.
-- `scripts/wqbagent_pws.ps1`: PowerShell launcher variant.
-- `TODO.md`: short project todo notes.
-
-## Tech stack
-
-- Python
-- CrewAI
-- LangChain + Chroma
-- HuggingFace embeddings (`BAAI/bge-m3`)
-- PDF loaders from `langchain_community`
+- `wqbagent_embedding.py` — builds/updates a Chroma vector store from PDF/text sources and exposes the `retrieve_text_data` tool.
+- `wqbagent_output_test.py` — minimal CrewAI pipeline for validating terminal colors/logging and LLM connectivity.
+- `wqbquant_searchtool_test.py` — health check helper for search/retrieval tools.
+- `wqbagent-v2.ipynb`, `wqbagent-terminal.ipynb` — notebooks for interactive development and experiments.
+- `releases/` — archived v1 artifacts.
+- `scripts/` — Windows batch/PowerShell launchers (paths and entrypoints need to be customized).
+- `requirements.txt` — Python dependencies.
 
 ## Prerequisites
 
-- Windows (project scripts are currently Windows-focused).
-- Python 3.10+ recommended.
-- A virtual environment (example folder in this repo: `wqbagentvenv`).
-- Access to your LLM endpoint (OpenAI-compatible API).
-- Forum PDF data on local disk.
+- Python 3.10+
+- Windows recommended for the provided launch scripts (they can be adapted for other OSes)
+- Access to an OpenAI-compatible LLM endpoint
 
-## Quick start
+## Setup
 
-### 1) Create and activate a virtual environment
+1. Create and activate a virtual environment.
+2. Install dependencies:
 
-PowerShell:
+   ```powershell
+   pip install -r requirements.txt
+   ```
 
-```powershell
-python -m venv wqbagentvenv
-.\wqbagentvenv\Scripts\Activate.ps1
-```
+3. Create `config/config.py` (gitignored) and add your API key:
 
-CMD:
+   ```python
+   API_KEY = "YOUR_KEY_HERE"
+   ```
 
-```bat
-python -m venv wqbagentvenv
-wqbagentvenv\Scripts\activate.bat
-```
+4. Place your documents under the expected folders or update the paths in `wqbagent_embedding.py`:
 
-### 2) Install dependencies
+   - `Docs/Forums`
+   - `Docs/OfficialDocs`
+   - `Docs/PaymentPolicy`
 
-No `requirements.txt` is tracked yet, so install from imports used by the scripts:
+## Build embeddings and retrieval
 
-```powershell
-pip install crewai langchain-chroma langchain-text-splitters langchain-community langchain-huggingface chromadb pypdf sentence-transformers
-```
+1. In `wqbagent_embedding.py`, update `BASE_DIR` and the doc paths if needed.
+2. Uncomment the one-time ingestion lines and run:
 
-Optional (used by script pipelines that convert ANSI logs to HTML):
+   ```powershell
+   python .\wqbagent_embedding.py
+   ```
 
-```powershell
-pip install ansi2html rich
-```
+3. Re-comment the ingestion lines after the DB is built to avoid reprocessing.
 
-### 3) Configure paths and credentials
+Embeddings are stored in `embedding_db/wqb_embedding_db` (gitignored). Ingest tracking is stored as `ingested_files.json` inside each docs folder.
 
-Update values in `wqbagent_v2.py` for your machine:
+## Run utilities
 
-- `BASE_DIR`
-- `WQB_CONSULTANT_FORUM_PDF_PATH`
-- cache and log folders derived from `BASE_DIR`
-- LLM settings (`model`, `base_url`, `api_key`)
+- Output/log formatting test:
 
-### 4) Build vector DB (first run only)
+  ```powershell
+  python .\wqbagent_output_test.py
+  ```
 
-In `wqbagent_v2.py`, uncomment this line once:
+- Search tool health check (requires you to wire in the tools/LLM from your pipeline):
 
-```python
-# vectorstore = ingest_forum()
-```
+  ```powershell
+  python .\wqbquant_searchtool_test.py
+  ```
 
-Then run once to create embeddings and persist Chroma DB.  
-After DB is created, comment it back again to avoid repeated ingestion.
+## Windows launchers
 
-### 5) Run the agent
+`scripts/wqbagent.bat`, `scripts/wqbagent_test.bat`, and `scripts/wqbagent_pws.ps1` are templates that:
 
-Direct Python run:
+- activate a venv
+- force UTF-8 output
+- pipe ANSI output to HTML using `ansi2html`
 
-```powershell
-python .\wqbagent_v2.py
-```
+Update the venv path and the Python entrypoint (the default points to `wqbagent_v2.py`, which is not tracked in this repo) to match your local script or notebook export.
 
-Or use launcher scripts:
+## Generated files
 
-```bat
-.\scripts\wqbagent.bat
-```
+The following are created at runtime and are excluded from git:
 
-Test run:
-
-```bat
-.\scripts\wqbagent_test.bat
-```
-
-## Output
-
-- Terminal output with CrewAI verbose logs.
-- Timestamped logs under `logs/`.
-- Some launch scripts also produce HTML logs.
-
-## Before pushing to GitHub (important)
-
-1. Remove hardcoded secrets from code (especially API keys).
-2. Rotate/revoke any previously exposed API keys.
-3. Prefer environment variables for sensitive values:
-   - `OPENAI_API_KEY` (or your provider key)
-   - endpoint URL variables if needed
-4. Keep local data/cache directories out of git (`logs`, `cache`, `wqbagentvenv`, vector DB folders).
-
-## Suggested next improvements
-
-- Add a proper `requirements.txt` or `pyproject.toml`.
-- Move all paths/secrets into `.env` + config module.
-- Add one-click setup script and basic tests for ingestion/retrieval flow.
-- Document expected PDF data format and folder layout.
+- `logs/`
+- `cache/`
+- `embedding_db/` and `wqb_embedding_db/`
+- `quant_forum_chroma/`, `quant_forum_bgem3/`
 
 ## License
 
-No license file is currently included. Add a `LICENSE` file before open-sourcing.
-
+No license file is currently included.
