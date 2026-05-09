@@ -4,12 +4,12 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
 
 ## Repository contents
 
-- `wqbagent_embedding.py`: builds/updates a Chroma vector store from PDF/text sources and exposes the `retrieve_text_data` tool.
+- `wqbagent_embedding.py`: builds/updates a Chroma vector store from PDF/text sources and exposes the `retrieve_text_data` tool function.
 - `wqbagent_output_test.py`: minimal CrewAI pipeline for validating terminal colors/logging and LLM connectivity.
-- `wqbquant_searchtool_test.py`: health check helper for search/retrieval tools.
+- `wqbquant_searchtool_test.py`: health check helper for search/retrieval tools (legacy filename).
 - `wqbagent-v2.ipynb`, `wqbagent-terminal.ipynb`: notebooks for interactive development and experiments.
 - `releases/`: archived v1 artifacts.
-- `scripts/`: Windows batch/PowerShell launchers (paths and entry points need to be customized).
+- `scripts/`: Windows batch/PowerShell launchers (update venv paths and Python entry points; see Windows launchers below).
 - `requirements.txt`: Python dependencies.
 
 ## Prerequisites
@@ -50,7 +50,7 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
 
 3. Re-comment the ingestion lines after the DB is built to avoid reprocessing.
 
-Embeddings are stored in `embedding_db/wqb_embedding_db` (gitignored). Ingest tracking is stored as `ingested_files.json` inside each docs folder.
+Embeddings are stored under `embedding_db/` (default subfolder `wqb_embedding_db`, gitignored). Ingest tracking is stored as `ingested_files.json` inside each docs folder.
 
 ## Run utilities
 
@@ -80,10 +80,10 @@ Update the venv path and the Python entry point to match an available script lik
 
 The following are created at runtime and are excluded from git:
 
-- `logs/`
-- `cache/`
-- `embedding_db/` and `wqb_embedding_db/`
-- `quant_forum_chroma/`, `quant_forum_bgem3/`
+- `logs/` (run logs)
+- `cache/` (HF/transformers cache)
+- `embedding_db/` and `wqb_embedding_db/` (vector store data)
+- `quant_forum_chroma/`, `quant_forum_bgem3/` (legacy vector stores from earlier versions)
 
 ## License
 
