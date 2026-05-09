@@ -1,0 +1,23 @@
+# LangChain Ecosystem
+langchain
+langchain-community
+langchain-core
+langchain-text-splitters
+langchain-chroma
+langchain-openai
+langchain-huggingface
+
+# CrewAI Ecosystem
+crewai
+crewai-tools
+
+# Embeddings & Models
+sentence-transformers
+
+# Document Loaders
+pypdf
+
+# Environment Tools
+ipywidgets
+tqdm
+nest-asyncio

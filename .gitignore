@@ -9,3 +9,5 @@
 /wqbagentvenv
 /config/__pycache__
 /config
+/__pycache__
+/embedding_db
