@@ -21,3 +21,4 @@ pypdf
 ipywidgets
 tqdm
 nest-asyncio
+ansi2html

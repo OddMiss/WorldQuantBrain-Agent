@@ -39,7 +39,7 @@ cd /d "%PARENT_DIR%"
 
 :: 5. ACTIVATE YOUR VIRTUAL ENVIRONMENT
 echo [INFO] Activating virtual environment...
-call D:\AI_Data\Computer\Agent-WQB\wqbagentvenv\Scripts\activate.bat
+call D:\AI_Data\Computer\WorldQuantBrain-Agent\wqbagentvenv\Scripts\activate.bat
 
 :: 6. Force colors on and unbuffered output
 set FORCE_COLOR=1

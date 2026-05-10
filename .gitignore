@@ -7,7 +7,9 @@
 /quant_forum_chroma
 /wqb_embedding_db
 /wqbagentvenv
+/wqbagentportablevenv
 /config/__pycache__
 /config
 /__pycache__
 /embedding_db
+/utils/__pycache__
