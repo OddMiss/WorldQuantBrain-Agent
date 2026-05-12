@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config.config import API_KEY_MOONSHOT
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import tool
-from utils.htmlcolor import capture_and_log
+from utils.htmlcolorlog import capture_and_log
 from utils.logger import setup_logger
 
 # ====================== CONFIG ======================
