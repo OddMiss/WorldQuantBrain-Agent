@@ -1,2 +1,0 @@
-- WQB Official API
-- Embedding Exist file detector

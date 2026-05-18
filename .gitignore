@@ -9,10 +9,11 @@
 /wqbagentvenv
 /wqbagentportablevenv
 /config/__pycache__
-/config
+/config/api_key.py
 /__pycache__
 /embedding_db
 /utils/__pycache__
 /Docs
 /DataFields
 /Operators
+/Credentials
