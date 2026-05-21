@@ -37,7 +37,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    API_KEY_DEEPSEEK = "YOUR_KEY_HERE"
    ```
 
-   Set the key(s) you plan to use; the variable names mirror the provider choices in `wqbagent_v2_2.py` (Moonshot, Gemini variants, and DeepSeek).
+   Only set keys for the providers you plan to use; other entries can be left blank or removed. The variable names mirror the provider choices in `wqbagent_v2_2.py` (Moonshot, Gemini variants, and DeepSeek).
 
 4. Place your documents under the expected folders or update the paths in `wqbagent_v2_2.py` / `wqbagent_embedding.ipynb`:
 
