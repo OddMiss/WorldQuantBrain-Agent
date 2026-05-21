@@ -2,6 +2,8 @@ import io
 import sys
 import re
 from contextlib import contextmanager
+from ansi2html import Ansi2HTMLConverter
+import re
 
 # ====================== ELEGANT LOGGING ENGINE ======================
 class PipelineLogger:
@@ -42,10 +44,7 @@ class PipelineLogger:
 
     def generate_html_and_close(self):
         """Converts RAM buffer to HTML, then gracefully closes files."""
-        try:
-            from ansi2html import Ansi2HTMLConverter
-            import re
-            
+        try:          
             conv = Ansi2HTMLConverter(dark_bg=True, scheme='osx')
             raw_ansi = self.ansi_buffer.getvalue()
             

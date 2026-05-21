@@ -7,7 +7,7 @@ set PYTHONUTF8=1
 
 :: 2. Define Relative Paths
 set "PARENT_DIR=%~dp0.."
-set "PYTHON_EXE=%~dp0..\..\wqbagentportablevenv\python.exe"
+set "PYTHON_EXE=%~dp0..\..\wqbagentportablevenv312\python.exe"
 
 cd /d "%PARENT_DIR%"
 

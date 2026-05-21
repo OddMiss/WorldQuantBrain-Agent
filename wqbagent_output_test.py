@@ -3,7 +3,7 @@ import sys
 import datetime
 # Ensure current directory is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config.config import API_KEY_MOONSHOT
+from config.api_key import API_KEY_MOONSHOT
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import tool
 from utils.htmlcolorlog import capture_and_log
@@ -28,7 +28,7 @@ HTML_FILE = os.path.join(LOG_DIR, f"wqb_agent-{timestamp}.html")
 logger = setup_logger(LOG_DIR, "wqb_agent_test", "wqb_main_logger")
 
 # ====================== YOUR GEMINI CLIENT ======================
-logger.info("Initializing LLM client...")
+logger.info("Main", "Initializing LLM client...")
 llm = LLM(
     model="moonshot/moonshot-v1-32k",   
     base_url="https://api.moonshot.cn/v1",
@@ -48,11 +48,16 @@ llm = LLM(
 @tool("Dummy_Search")
 def dummy_search(query: str) -> str:
     """A fake search tool to test if the agent can use tools and log output."""
-    logger.info(f"🔍 Tool Called: 'Dummy_Search' | Query: '{query}'")
+
+    # 💡 CRITICAL TEST CHECKPOINT 1: Direct terminal bypass print
+    # If you see this but NOT the logger line, capture_and_log is swallowing your logger stream.
+    print(f"\n[SYSTEM BLOCK BYPASS] >>> Python executed tool 'Dummy_Search' with query: '{query}'", flush=True)
+
+    logger.info("Dummy Search", f"🔍 Tool Called: 'Dummy_Search' | Query: '{query}'")
     return "This is dummy data. Tell the user the test is successful."
 
 # ====================== AGENT (Simplified) ======================
-logger.info("Setting up Agent...")
+logger.info("Main", "Setting up Agent...")
 tester_agent = Agent(
     role="System Tester",
     goal="Use the Dummy_Search tool to verify the system works, then output a short success message.",
@@ -64,7 +69,7 @@ tester_agent = Agent(
 )
 
 # ====================== TASK & CREW (Simplified) ======================
-logger.info("Defining Tasks and assembling Crew...")
+logger.info("Main", "Defining Tasks and assembling Crew...")
 task1 = Task(
     description="Call the Dummy_Search tool with the query 'test formatting'. Then format your final answer in Chinese and English.",
     expected_output="A short bilingual success message.",
@@ -72,7 +77,7 @@ task1 = Task(
 )
 
 crew = Crew(agents=[tester_agent], tasks=[task1], verbose=True)
-logger.info("✅ Crew successfully assembled.")
+logger.info("Main", "✅ Crew successfully assembled.")
 
 # ====================== RUN ======================
 if __name__ == "__main__":
@@ -80,14 +85,26 @@ if __name__ == "__main__":
     # The with capture_and_log(...) block is the magic here. Even if your CrewAI code crashes 
     # in the middle of execution, Python's Context Manager guarantees that sys.stdout will be 
     # restored back to normal and the HTML file will be generated properly.
+
+    # 💡 CRITICAL TEST CHECKPOINT 2: Verifying console logging BEFORE stream capturing starts
+    logger.info("Main", "Testing baseline console output capability...")
+
     with capture_and_log(TRANSCRIPT_FILE, HTML_FILE):
         user_request = "Run a quick ANSI color and HTML pipe test."
-        logger.info(f"🚀 Kickstarting Crew process with input: '{user_request}'")
+
+        # 💡 CRITICAL TEST CHECKPOINT 3: Inside the stream capturing block
+        # If this doesn't show up in terminal instantly, capture_and_log is missing stream flushing.
+        print(f"\n[STREAM CHECK] Starting execution tracking. If you see this, stdout redirection is running.\n", flush=True)
+
+        logger.info("Main", f"🚀 Kickstarting Crew process with input: '{user_request}'")
         
         try:
             result = crew.kickoff(inputs={"user_request": user_request})
-            logger.info("✅ Crew kickoff completed successfully.")
-            print(f"\n{'='*50}\nFINAL RESULT\n{'='*50}\n{result}")
+            logger.info("Main", "✅ Crew kickoff completed successfully.")
+            logger.info("Main", f"\n{'='*50}\nFINAL RESULT\n{'='*50}\n{result}")
             
         except Exception as e:
-            logger.error(f"❌ Fatal error during Crew execution: {e}", exc_info=True)
+            logger.error("Main", f"❌ Fatal error during Crew execution: {e}", exc_info=True)
+
+    # 💡 CRITICAL TEST CHECKPOINT 4: Out of context block verification
+    print(f"\n[STREAM CHECK] Restored native system stdout. Check file dumps at: {LOG_DIR}", flush=True)

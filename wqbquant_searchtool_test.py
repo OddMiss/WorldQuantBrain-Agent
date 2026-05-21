@@ -1,7 +1,15 @@
+import os
+import sys
+# Ensure current directory is in path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from crewai import Agent, Task, Crew, Process
+from utils.htmlcolorlog import capture_and_log
 
-
-def test_agents(retrieve_text_data, search_operators, search_datafields, llm):
+def test_agents(
+    retrieve_text_data, search_operators, 
+    search_datafields, llm, transcript_file, 
+    html_file, logger
+):
     """Run a strict health check for the three search tools."""
     diagnostic_tester = Agent(
         role="API Formatting Assistant",
@@ -38,4 +46,26 @@ def test_agents(retrieve_text_data, search_operators, search_datafields, llm):
         verbose=True,
     )
 
-    return crew.kickoff()
+    with capture_and_log(transcript_file, html_file):
+        logger.info("Test Agents", f"🚀 Kickstarting Crew process.")
+        
+        try:
+            result = crew.kickoff()
+            logger.info("Test Agents", "✅ Crew kickoff completed successfully.")
+            logger.info("Test Agents", f"\n{'='*50}\nFINAL RESULT\n{'='*50}\n{result}")
+            
+        except Exception as e:
+            logger.error("Test Agents", f"❌ Fatal error during Crew execution: {e}", exc_info=True)
+
+    return result
+
+def test_search_tools(search_tool_fun, search_tool_name, search_query, logger):
+    logger.info("Test Search Tools", f"Testing {search_tool_name} tool...")
+
+    test_result = search_tool_fun.run(search_query)
+
+    logger.info("Test Search Tools", f"\n{'='*80}")
+    logger.info("Test Search Tools", "TOOL TEST RESULT:")
+    logger.info("Test Search Tools", test_result)  # first 1500 chars
+    logger.info("Test Search Tools", "\n" + "="*80)
+    logger.info("Test Search Tools", f"Length of returned text: {len(test_result)} characters")
