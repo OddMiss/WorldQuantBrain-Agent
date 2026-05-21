@@ -48,7 +48,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    - `Docs/Forums/wqb_brain_tips_pdf`
    - `Docs/OfficialDocs`
 
-   Note: If migrating from an earlier version with PaymentPolicy PDFs in `Docs/PaymentPolicy`, move them into `Docs/Forums/wqb_brain_tips_pdf` (the v2.2 tips folder).
+   Note: If migrating from an earlier version with PaymentPolicy PDFs in `Docs/PaymentPolicy`, move them into `Docs/Forums/wqb_brain_tips_pdf` (v2.2 treats PaymentPolicy content as part of the brain tips corpus).
 
 ## Build embeddings and retrieval
 
@@ -110,7 +110,7 @@ The following are created at runtime and are excluded from git:
 - `logs/` (run logs)
 - `cache/` (HF/transformers cache)
 - `embedding_db/` (v2.2 vector stores, e.g. `wqb_forum_*_embedding_db` and `wqb_official_docs_embedding_db`)
-- `wqb_embedding_db/` (legacy v1/v2 vector store if configured separately)
+- `wqb_embedding_db/` (legacy v1/v2 root-level vector store if you previously built embeddings outside `embedding_db/`)
 - `quant_forum_chroma/`, `quant_forum_bgem3/` (legacy vector stores from earlier versions)
 
 ## License
