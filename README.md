@@ -42,7 +42,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    - `Docs/Forums/wqb_china_consultant_pdf`
    - `Docs/Forums/wqb_global_consultant_pdf`
    - `Docs/Forums/wqb_research_pdf`
-   - `Docs/Forums/wqb_brain_tips_pdf` (PaymentPolicy PDFs are stored here in v2.2)
+   - `Docs/Forums/wqb_brain_tips_pdf` (PaymentPolicy PDFs from the removed `Docs/PaymentPolicy` folder should be placed here in v2.2)
    - `Docs/OfficialDocs`
 
 ## Build embeddings and retrieval
@@ -56,7 +56,15 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
 
 3. Execute the ingestion cells once to build the embedding DBs.
 
-Embeddings are stored under `embedding_db/` (gitignored) with v2.2 subfolders: `wqb_forum_china_embedding_db`, `wqb_forum_global_embedding_db`, `wqb_forum_research_embedding_db`, `wqb_forum_tips_embedding_db`, and `wqb_official_docs_embedding_db`. Ingest tracking is stored as `ingested_files.json` inside each docs folder.
+Embeddings are stored under `embedding_db/` (gitignored) with v2.2 subfolders:
+
+- `wqb_forum_china_embedding_db`
+- `wqb_forum_global_embedding_db`
+- `wqb_forum_research_embedding_db`
+- `wqb_forum_tips_embedding_db`
+- `wqb_official_docs_embedding_db`
+
+Ingest tracking is stored as `ingested_files.json` inside each docs folder.
 
 ## Run the v2.2 agent
 
