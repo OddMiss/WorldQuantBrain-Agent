@@ -1,14 +1,15 @@
-# WorldQuantBrain-Agent
+# WorldQuantBrain-Agent (v2.2)
 
-Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consultant materials and experimenting with multi-agent alpha idea generation. The repo includes a standalone embedding builder, test utilities, and notebooks for interactive development.
+Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain consultant materials and experimenting with multi-agent alpha idea generation. The repo includes the v2.2 agent pipeline, embedding notebook, test utilities, and notebooks for interactive development.
 
 ## Repository contents
 
-- `wqbagent_embedding.py`: builds/updates a Chroma vector store from PDF/text sources and exposes the `retrieve_text_data` tool function.
-- `wqbagent_output_test.py`: minimal CrewAI pipeline for validating terminal colors/logging and LLM connectivity.
+- `wqbagent_v2_2.py`: v2.2 CrewAI pipeline for embedding retrieval, search tools, and alpha simulation.
+- `wqbagent_embedding.ipynb`: v2.2 embedding build notebook for PDF/text sources.
+- `wqbagent-v2.2.ipynb`: interactive notebook for the full v2.2 agent workflow.
+- `wqbagent_output_test.py`, `wqbagent_output_test.ipynb`: output/log formatting and LLM connectivity checks.
 - `wqbquant_searchtool_test.py`: health check helper for search/retrieval tools.
-- `wqbagent-v2.ipynb`, `wqbagent-terminal.ipynb`: notebooks for interactive development and experiments.
-- `releases/`: archived v1 artifacts.
+- `releases/`: archived v1/v2 artifacts (e.g., `wqbagent_v1.py`, `wqbagent-v1.ipynb`, `wqbagent-v2.ipynb`).
 - `scripts/`: Windows batch/PowerShell launchers (update venv paths and Python entry points; see Windows launchers below).
 - `requirements.txt`: Python dependencies.
 
@@ -27,30 +28,41 @@ Local CrewAI-based toolkit for building embeddings from WorldQuant Brain consult
    pip install -r requirements.txt
    ```
 
-3. Create `config/config.py` (gitignored) and add your API key:
+3. Create `config/api_key.py` (gitignored) and add your API keys:
 
    ```python
-   API_KEY = "YOUR_KEY_HERE"
+   API_KEY_MOONSHOT = "YOUR_KEY_HERE"
+   API_KEY_GEMINI_C26 = "YOUR_KEY_HERE"
+   API_KEY_GEMINI_CU = "YOUR_KEY_HERE"
+   API_KEY_DEEPSEEK = "YOUR_KEY_HERE"
    ```
 
-4. Place your documents under the expected folders or update the paths in `wqbagent_embedding.py`:
+4. Place your documents under the expected folders or update the paths in `wqbagent_v2_2.py` / `wqbagent_embedding.ipynb`:
 
-   - `Docs/Forums`
+   - `Docs/Forums/wqb_china_consultant_pdf`
+   - `Docs/Forums/wqb_global_consultant_pdf`
+   - `Docs/Forums/wqb_research_pdf`
+   - `Docs/Forums/wqb_brain_tips_pdf` (PaymentPolicy PDFs are stored here in v2.2)
    - `Docs/OfficialDocs`
-   - `Docs/PaymentPolicy`
 
 ## Build embeddings and retrieval
 
-1. In `wqbagent_embedding.py`, update `BASE_DIR` and the doc paths if needed.
-2. Uncomment the one-time ingestion lines and run:
+1. In `wqbagent_v2_2.py` / `wqbagent_embedding.ipynb`, update `BASE_DIR` and the doc paths if needed.
+2. Run the embedding build workflow (recommended: `wqbagent_embedding.ipynb`):
 
    ```powershell
-   python .\wqbagent_embedding.py
+   jupyter lab
    ```
 
-3. Re-comment the ingestion lines after the DB is built to avoid reprocessing.
+3. Execute the ingestion cells once to build the embedding DBs.
 
-Embeddings are stored under `embedding_db/` (default subfolder `wqb_embedding_db`, gitignored). If you configure a separate root-level `wqb_embedding_db/`, it is also ignored. Ingest tracking is stored as `ingested_files.json` inside each docs folder.
+Embeddings are stored under `embedding_db/` (gitignored) with v2.2 subfolders: `wqb_forum_china_embedding_db`, `wqb_forum_global_embedding_db`, `wqb_forum_research_embedding_db`, `wqb_forum_tips_embedding_db`, and `wqb_official_docs_embedding_db`. Ingest tracking is stored as `ingested_files.json` inside each docs folder.
+
+## Run the v2.2 agent
+
+```powershell
+python .\wqbagent_v2_2.py
+```
 
 ## Run utilities
 
@@ -74,7 +86,7 @@ Embeddings are stored under `embedding_db/` (default subfolder `wqb_embedding_db
 - force UTF-8 output
 - pipe ANSI output to HTML using `ansi2html`
 
-Update the venv path and the Python entry point to match an available script like `wqbagent_embedding.py` or `wqbagent_output_test.py`, or your notebook export:
+Update the venv path and the Python entry point to match an available script like `wqbagent_v2_2.py` or `wqbagent_output_test.py`, or your notebook export:
 
 - `.bat`: update the venv activation line and the `python -u` command.
 - `.ps1`: update `$venvActivate` and `$pythonScript`.
@@ -85,8 +97,8 @@ The following are created at runtime and are excluded from git:
 
 - `logs/` (run logs)
 - `cache/` (HF/transformers cache)
-- `embedding_db/` (default vector store; includes `wqb_embedding_db` by default)
-- `wqb_embedding_db/` (optional root-level vector store if configured separately)
+- `embedding_db/` (v2.2 vector stores, e.g. `wqb_forum_*_embedding_db` and `wqb_official_docs_embedding_db`)
+- `wqb_embedding_db/` (legacy v1 vector store if configured separately)
 - `quant_forum_chroma/`, `quant_forum_bgem3/` (legacy vector stores from earlier versions)
 
 ## License
