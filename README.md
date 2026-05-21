@@ -48,7 +48,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    - `Docs/Forums/wqb_brain_tips_pdf`
    - `Docs/OfficialDocs`
 
-   Note: If migrating from an earlier version with PaymentPolicy PDFs in `Docs/PaymentPolicy`, move them into `Docs/Forums/wqb_brain_tips_pdf` (v2.2 treats PaymentPolicy content as part of the brain tips corpus).
+   Note: If migrating from an earlier version with PaymentPolicy PDFs in `Docs/PaymentPolicy`, move them into `Docs/Forums/wqb_brain_tips_pdf` (v2.2 treats PaymentPolicy content as part of the brain tips corpus, not `Docs/OfficialDocs`).
 
 ## Build embeddings and retrieval
 
