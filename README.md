@@ -28,7 +28,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    pip install -r requirements.txt
    ```
 
-3. Create `config/api_key.py` (gitignored) and add your API keys:
+3. Ensure the `config/` directory exists, then create `config/api_key.py` (gitignored) and add your API keys:
 
    ```python
    API_KEY_MOONSHOT = "YOUR_KEY_HERE"
@@ -37,7 +37,8 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    API_KEY_DEEPSEEK = "YOUR_KEY_HERE"
    ```
 
-   Define all variables; for providers you are not using, set empty strings (e.g., `API_KEY_DEEPSEEK = ""`). The variable names mirror the provider choices in `wqbagent_v2_2.py` (Moonshot, Gemini variants, and DeepSeek).
+   Define all variables; for providers you are not using, set empty strings (e.g., `API_KEY_DEEPSEEK = ""`).
+   The variable names mirror the provider choices in `wqbagent_v2_2.py` (Moonshot, Gemini variants, and DeepSeek).
 
 4. Place your documents under the expected folders or update the paths in `wqbagent_v2_2.py` / `wqbagent_embedding.ipynb`:
 
@@ -51,7 +52,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
 
 ## Build embeddings and retrieval
 
-1. In `wqbagent_v2_2.py` / `wqbagent_embedding.ipynb`, update `BASE_DIR` and the doc paths if needed.
+1. Update `BASE_DIR` and the doc paths in `wqbagent_embedding.ipynb` for embedding builds, and in `wqbagent_v2_2.py` if you run the agent script.
 2. Run the embedding build workflow (recommended: `wqbagent_embedding.ipynb`):
 
    ```powershell
