@@ -37,6 +37,8 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    API_KEY_DEEPSEEK = "YOUR_KEY_HERE"
    ```
 
+   Set the key(s) you plan to use; the variable names mirror the provider choices in `wqbagent_v2_2.py` (Moonshot, Gemini variants, and DeepSeek).
+
 4. Place your documents under the expected folders or update the paths in `wqbagent_v2_2.py` / `wqbagent_embedding.ipynb`:
 
    - `Docs/Forums/wqb_china_consultant_pdf`
@@ -45,7 +47,7 @@ Local CrewAI-based toolkit (v2.2) for building embeddings from WorldQuant Brain 
    - `Docs/Forums/wqb_brain_tips_pdf`
    - `Docs/OfficialDocs`
 
-   Note: PaymentPolicy PDFs previously stored under `Docs/PaymentPolicy` should now be placed in `Docs/Forums/wqb_brain_tips_pdf` for v2.2.
+   Note: Move any existing PaymentPolicy PDFs from `Docs/PaymentPolicy` into `Docs/Forums/wqb_brain_tips_pdf` manually for v2.2.
 
 ## Build embeddings and retrieval
 
