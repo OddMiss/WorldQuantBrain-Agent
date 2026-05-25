@@ -38,17 +38,19 @@ def _retry_after(FUNCTION, *args, **kwargs):
     for attempt in range(MAX_RETRIES):
         time.sleep(3)
         try:
-            SUCCESS, VALUE = FUNCTION(*args, **kwargs)
-            if SUCCESS: return True, VALUE
-            else: logger.error(f"RETRY EXCEPT-{function_name} ({R_account_no})", f"Fail due to {VALUE}")
+            fail, value = FUNCTION(*args, **kwargs)
+            if not fail: return False, value
+            raise Exception(value) # Raise using the detailed message
         except Exception as e:
-            e = str(e)
+            e_msg = str(e)
             flag = "❗❗❗❗❗❗❗❗❗❗" if attempt >= 1 else ""
-            logger.error(f"RETRY EXCEPT-{function_name} ({R_account_no})", f"Attempt {attempt + 1}{flag} failed: due to {e}")
-            if e in {PERMISSION_ERROR, NONETYPE_GET_ERROR, NONETYPE_POST_ERROR}: return False, e
+            logger.error(f"RETRY EXCEPT-{function_name} ({R_account_no})", f"Attempt {attempt + 1}{flag} failed: due to {e_msg}")
+            
+            # Check the general classifier flag to stop retrying
+            if fail in NON_RETRYABLE_ERRORS: return True, e_msg
             if attempt == MAX_RETRIES - 1:
                 logger.error(f"RETRY EXCEPT-{function_name} ({R_account_no})", f"All attempts failed.")
-                return False, UNKNOWN_ERROR
+                return True, e_msg
             logger.info(f"RETRY EXCEPT-{function_name} ({R_account_no})", f"Retrying after 5 seconds... (Attempt {attempt + 2} of {MAX_RETRIES})")
 
 def _dict_to_jsonFile(Dict, filename):
@@ -80,19 +82,18 @@ def _get_pyramid_multipliers(ROOTPATH, SESS=None, Online=False, Save_to_Local=Fa
             pyramid_dict = dict(sorted(pyramid_dict.items(), key=lambda x: x[1], reverse=True))
             logger.info(f"Get Pyramid Multipliers ({account_no})", f"✅ Pyramid multipliers fetched successfully from API.")
             if Save_to_Local: _dict_to_jsonFile(pyramid_dict, os.path.join(ROOTPATH, "Pyramid-Multipliers.json"))
-            return True, pyramid_dict
+            return False, pyramid_dict
         else:
             Status_Code = alpha_resp.status_code
-            # print(f"Error: {Status_Code}")
-            if Status_Code == 401: return False, ERROR_401
-            elif Status_Code == 429: return False, ERROR_429
+            if Status_Code == 401: return ERROR_401, f"❌ Unauthorized (401): Failed to authenticate. Please check your credentials and session. Response: {alpha_resp.text}"
+            elif Status_Code == 429: return ERROR_429, f"❌ Rate Limited (429): Too many requests. Please try again later. Response: {alpha_resp.text}"
             else:
                 logger.error(f"Get Pyramid Multipliers ({account_no})", f"❌ Error: {Status_Code}")
-                return False, UNKNOWN_ERROR
+                return UNKNOWN_ERROR, f"❌ Unknown Error: {Status_Code}"
     else: 
         pyramid_dict = _jsonFile_to_dict(os.path.join(ROOTPATH, "Pyramid-Multipliers.json"), account_no=account_no)
         logger.info(f"Get Pyramid Multipliers ({account_no})", f"✅ Pyramid multipliers loaded successfully from local file.")
-        return True, pyramid_dict
+        return False, pyramid_dict
 
 def _get_datasetid_suffix(ROOTPATH, account_no="N"):
     DatasetID_Suffix_Dict = _jsonFile_to_dict(os.path.join(ROOTPATH, "Dataset-Suffix-Category.json"), account_no=account_no)
@@ -114,7 +115,7 @@ def _get_operators(ROOTPATH, SESS=None, Online=False, Download_2_Local=False, ac
         response = SESS.get('https://api.worldquantbrain.com/operators')
         if response.status_code != 200:
             logger.error(f"Get Operators ({account_no})", f"❌ Failed to get operators: {response.text} (Status Code: {response.status_code})")
-            return False, f"❌ Failed to get operators: {response.text}"
+            return True, f"❌ Failed to get operators: {response.text}"
         data = response.json()
         # print(type(data))  # List
         # The operators endpoint might return a direct array instead of an object with 'items' or 'results'
@@ -134,32 +135,32 @@ def _get_operators(ROOTPATH, SESS=None, Online=False, Download_2_Local=False, ac
                 os.makedirs(os.path.dirname(Operator_Path), exist_ok=True)
                 _dict_to_jsonFile(Operators_Dict, Operator_Path)
                 logger.info(f"Get Operators ({account_no})", f"✅ Operators Saved to {Operator_Path}")
-            return True, Operators_Dict
+            return False, Operators_Dict
         elif 'results' in data: return True, data['results']
         else: 
             logger.error(f"Get Operators ({account_no})", f"❌ Unexpected operators response format. Response: {data}")
-            return False, f"❌ Unexpected operators response format. Response: {data}"
+            return True, f"❌ Unexpected operators response format. Response: {data}"
     else:
         Operator_Path = os.path.join(ROOTPATH, "Operators-Agent.json")
         Operators_Dict = _jsonFile_to_dict(Operator_Path, account_no=account_no)
         logger.info(f"Get Operators ({account_no})", f"✅ Operators loaded successfully from local file.")
-        return True, Operators_Dict
+        return False, Operators_Dict
 
 global FIELD_SET_SUFFIX, SET_SUFFIX, OPERATOR_INFO_DICT, PYRAMID_MULTIPLIERS
 def initialize_global_variables(account_no="N"):
     global FIELD_SET_SUFFIX, SET_SUFFIX, OPERATOR_INFO_DICT, PYRAMID_MULTIPLIERS
     FIELD_SET_SUFFIX = _get_datafieldid_datasetid_suffix(DATAFIELDS_PATH_C, account_no=account_no)
     SET_SUFFIX = _get_datasetid_suffix(DATAFIELDS_PATH_C, account_no=account_no)
-    success, OPERATOR_INFO_DICT = _get_operators(ROOTPATH=OPERATORS_PATH_C, Online=False, account_no=account_no)
-    if not success:
+    fail, OPERATOR_INFO_DICT = _retry_after(FUNCTION=_get_operators, ROOTPATH=OPERATORS_PATH_C, Online=False, account_no=account_no)
+    if fail:
         logger.error(f"Initialize Global Variables ({account_no})", f"❌ Failed to get operators with error: {OPERATOR_INFO_DICT}")
-        return False, f"❌ Failed to get operators with error: {OPERATOR_INFO_DICT}"
-    success, PYRAMID_MULTIPLIERS = _get_pyramid_multipliers(ROOTPATH=DATAFIELDS_PATH_C, account_no=account_no)
-    if not success:
+        return True, f"❌ Failed to get operators with error: {OPERATOR_INFO_DICT}"
+    fail, PYRAMID_MULTIPLIERS = _retry_after(FUNCTION=_get_pyramid_multipliers, ROOTPATH=DATAFIELDS_PATH_C, account_no=account_no)
+    if fail:
         logger.error(f"Initialize Global Variables ({account_no})", f"❌ Failed to get pyramid multipliers with error: {PYRAMID_MULTIPLIERS}")
-        return False, f"❌ Failed to get pyramid multipliers with error: {PYRAMID_MULTIPLIERS}"
+        return True, f"❌ Failed to get pyramid multipliers with error: {PYRAMID_MULTIPLIERS}"
     logger.info(f"Initialize Global Variables ({account_no})", f"✅ Global variables initialized successfully.")
-    return True, "✅ Global variables initialized successfully."
+    return False, "✅ Global variables initialized successfully."
 
 def _build_simulation_payload(alpha_settings, regular_formula, account_no="N"):
     """
@@ -172,7 +173,7 @@ def _build_simulation_payload(alpha_settings, regular_formula, account_no="N"):
     """
     if not isinstance(alpha_settings, dict):
         logger.error(f"Build Simulation Payload ({account_no})", "❌ alpha_settings must be a dict.")
-        return False, "alpha_settings must be a dict."
+        return PAYLOAD_ERROR, f"❌ alpha_settings must be a dict."
 
     alpha_type = alpha_settings.get("type", "REGULAR")
     settings = {}
@@ -181,81 +182,81 @@ def _build_simulation_payload(alpha_settings, regular_formula, account_no="N"):
     missing_keys = [key for key in MUST_INCLUDE_SETTINGS_KEYS if key not in alpha_settings]
     if missing_keys:
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Missing required settings keys: {', '.join(missing_keys)}")
-        return False, f"Missing required settings keys: {', '.join(missing_keys)}"
+        return PAYLOAD_ERROR, f"❌ Missing required settings keys: {', '.join(missing_keys)}"
 
     # Check region
     region = alpha_settings.get("region")
     if region not in REGION:
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid region: {region}, must be one of {REGION}.")
-        return False, f"Invalid region: {region}, must be one of {REGION}."
-    
+        return PAYLOAD_ERROR, f"❌ Invalid region: {region}, must be one of {REGION}."
+
     # Check universe
     universe = alpha_settings.get("universe")
-    if universe not in UNIVERSER.get(region, set()):
-        logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid universe: {universe} for region: {region}, must be one of {UNIVERSER.get(region, set())}.")
-        return False, f"Invalid universe: {universe} for region: {region}, must be one of {UNIVERSER.get(region, set())}."
+    if universe not in UNIVERSE.get(region, set()):
+        logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid universe: {universe} for region: {region}, must be one of {UNIVERSE.get(region, set())}.")
+        return PAYLOAD_ERROR, f"❌ Invalid universe: {universe} for region: {region}, must be one of {UNIVERSE.get(region, set())}."
 
     # Check delay (must be integer, and valid for the region)
     delay = alpha_settings.get("delay")
     if not isinstance(delay, int):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid delay: {delay}, must be an integer.")
-        return False, f"Invalid delay: {delay}, must be an integer."
+        return PAYLOAD_ERROR, f"❌ Invalid delay: {delay}, must be an integer."
     if delay not in DELAY.get(region, set()):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid delay: {delay} for region: {region}, must be one of {DELAY.get(region, set())}.")
-        return False, f"Invalid delay: {delay} for region: {region}, must be one of {DELAY.get(region, set())}."
+        return PAYLOAD_ERROR, f"❌ Invalid delay: {delay} for region: {region}, must be one of {DELAY.get(region, set())}."
     
     # Check decay (between 0 and 512, suggest to be integer for better performance, but float is also acceptable)
     decay = alpha_settings.get("decay")
     if not isinstance(decay, (int, float)):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid decay: {decay}, must be a number.")
-        return False, f"Invalid decay: {decay}, must be a number."
+        return PAYLOAD_ERROR, f"❌ Invalid decay: {decay}, must be a number."
     if decay < 0 or decay > 512:
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid decay: {decay}, must be a number between 0 and 512, inclusive.")
-        return False, f"Invalid decay: {decay}, must be a number between 0 and 512, inclusive."
+        return PAYLOAD_ERROR, f"❌ Invalid decay: {decay}, must be a number between 0 and 512, inclusive."
 
     # Check neutralization
     neutralization = alpha_settings.get("neutralization")
     if neutralization not in NEUTRALIZATION_DICT.get(region, set()):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid neutralization: {neutralization} for region: {region}, must be one of {NEUTRALIZATION_DICT.get(region, set())}.")
-        return False, f"Invalid neutralization: {neutralization} for region: {region}, must be one of {NEUTRALIZATION_DICT.get(region, set())}."
+        return PAYLOAD_ERROR, f"❌ Invalid neutralization: {neutralization} for region: {region}, must be one of {NEUTRALIZATION_DICT.get(region, set())}."
     
     # Check truncation (between 0 and 1, inclusive, float only, suggest keep 2 decimal places for better performance, but more decimal places are also acceptable)
     truncation = alpha_settings.get("truncation")
     if not isinstance(truncation, (int, float)):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid truncation: {truncation}, must be a number.")
-        return False, f"Invalid truncation: {truncation}, must be a number."
+        return PAYLOAD_ERROR, f"❌ Invalid truncation: {truncation}, must be a number."
     if truncation < 0 or truncation > 1:
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid truncation: {truncation}, must be a number between 0 and 1, inclusive.")
-        return False, f"Invalid truncation: {truncation}, must be a number between 0 and 1, inclusive."
+        return PAYLOAD_ERROR, f"❌ Invalid truncation: {truncation}, must be a number between 0 and 1, inclusive."
     
     # Check pasteurization (either ON or OFF, case-sensitive)
     pasteurization = alpha_settings.get("pasteurization")
     if pasteurization not in {"ON", "OFF"}:
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid pasteurization: {pasteurization}, must be either 'ON' or 'OFF'.")
-        return False, f"Invalid pasteurization: {pasteurization}, must be either 'ON' or 'OFF'."
+        return PAYLOAD_ERROR, f"❌ Invalid pasteurization: {pasteurization}, must be either 'ON' or 'OFF'."
 
     # Check nanHandling (either ON or OFF, case-sensitive)
     nan_handling = alpha_settings.get("nanHandling")
     if nan_handling not in {"ON", "OFF"}:
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid nanHandling: {nan_handling}, must be either 'ON' or 'OFF'.")
-        return False, f"Invalid nanHandling: {nan_handling}, must be either 'ON' or 'OFF'."
+        return PAYLOAD_ERROR, f"❌ Invalid nanHandling: {nan_handling}, must be either 'ON' or 'OFF'."
 
     # Check maxTrade
     max_trade = alpha_settings.get("maxTrade")
     if max_trade not in MAX_TRADE.get(region, set()):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid maxTrade: {max_trade} for region: {region}, must be one of {MAX_TRADE.get(region, set())}.")
-        return False, f"Invalid maxTrade: {max_trade} for region: {region}, must be one of {MAX_TRADE.get(region, set())}."
+        return PAYLOAD_ERROR, f"❌ Invalid maxTrade: {max_trade} for region: {region}, must be one of {MAX_TRADE.get(region, set())}."
 
     # Check maxPosition (either ON or OFF, case-sensitive)
     max_position = alpha_settings.get("maxPosition")
-    if max_position not in {"ON", "OFF"}:
+    if max_position not in MAX_POSITION.get(region, set()):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid maxPosition: {max_position}, must be either 'ON' or 'OFF'.")
-        return False, f"Invalid maxPosition: {max_position}, must be either 'ON' or 'OFF'."
+        return PAYLOAD_ERROR, f"❌ Invalid maxPosition: {max_position}, must be either 'ON' or 'OFF'."
 
     # Max Position and Max Trade cannot both be set to On simultaneously
     if max_position == "ON" and max_trade == "ON":
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid combination: both maxPosition and maxTrade are set to 'ON'.")
-        return False, f"❌ Invalid combination: both maxPosition and maxTrade are set to 'ON'."
+        return PAYLOAD_ERROR, f"❌ Invalid combination: both maxPosition and maxTrade are set to 'ON'."
 
     # Check testPeriod
     # Format 1: with year and without month, like "P1Y"
@@ -264,10 +265,10 @@ def _build_simulation_payload(alpha_settings, regular_formula, account_no="N"):
     test_period = alpha_settings.get("testPeriod")
     if not isinstance(test_period, str):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid testPeriod: {test_period}, must be a string in format like 'P1Y', 'P1Y2M', or 'P2M'.")
-        return False, f"Invalid testPeriod: {test_period}, must be a string in format like 'P1Y', 'P1Y2M', or 'P2M'."
+        return PAYLOAD_ERROR, f"❌ Invalid testPeriod: {test_period}, must be a string in format like 'P1Y', 'P1Y2M', or 'P2M'."
     if not re.match(r'^P(\d+Y)?(\d+M)?$', test_period):
         logger.error(f"Build Simulation Payload ({account_no})", f"❌ Invalid testPeriod format: {test_period}, must be in format like 'P1Y', 'P1Y2M', or 'P2M'.")
-        return False, f"Invalid testPeriod format: {test_period}, must be in format like 'P1Y', 'P1Y2M', or 'P2M'."
+        return PAYLOAD_ERROR, f"❌ Invalid testPeriod format: {test_period}, must be in format like 'P1Y', 'P1Y2M', or 'P2M'."
 
     for key in MUST_INCLUDE_SETTINGS_KEYS:
         settings[key] = alpha_settings[key]
@@ -281,17 +282,17 @@ def _build_simulation_payload(alpha_settings, regular_formula, account_no="N"):
     # the payload for simulation
     payload["regular"] = regular_formula
 
-    return True, payload
+    return False, payload
 
 def _format_regular_formula(regular_formula: str) -> str:
     for old, new in REPLACE_RULES.items():
         regular_formula = regular_formula.replace(old, new)
     return regular_formula.strip()
 
-def _replace_regular_operators(regular_formula: str) -> str:
-    for old, new in OPERATOR_DICT.items():
-        regular_formula = regular_formula.replace(old, new)
-    return regular_formula
+# def _replace_regular_operators(regular_formula: str) -> str:
+#     for old, new in OPERATOR_DICT.items():
+#         regular_formula = regular_formula.replace(old, new)
+#     return regular_formula
 
 def _parse_alpha_expression(alpha_expression: str) -> Dict[str, Any]:
     """
@@ -420,14 +421,11 @@ def _check_regular_format(
         Datafields = parsed["data_fields"] # get all datafields from the regular
         Operators = parsed["operators"] # get all operators from the regular
     except (SyntaxError, ValueError) as exc:
-        return False, f"❌ {REGULAR_ERROR}: invalid regular syntax ({exc})"
+        return REGULAR_ERROR, f"❌ {REGULAR_ERROR}: invalid regular syntax ({exc})"
     except Exception as exc:
-        return (
-            False,
-            f"❌ {REGULAR_ERROR}: unable to parse regular formula ({type(exc).__name__}).",
-        )
+        return REGULAR_ERROR, f"❌ {REGULAR_ERROR}: unable to parse regular formula ({type(exc).__name__})."
     if not parsed.get("data_fields"):
-        return False, f"❌ {REGULAR_ERROR}: no data fields detected."
+        return REGULAR_ERROR, f"❌ {REGULAR_ERROR}: no data fields detected."
     logger.info(f"Check Regular Format ({account_no})", f"✅ the regular formula is parsed successfully.")
     logger.info(f"Check Regular Format ({account_no})", f"Datafields: {Datafields}")
     logger.info(f"Check Regular Format ({account_no})", f"Operators: {Operators}")
@@ -450,7 +448,7 @@ def _check_regular_format(
         suffix = set(["-".join(item.split("-")[1:]) for item in dataset_suffix]) # get suffix
         Dataset_List.append(dataset_id)
         Suffix_List.append(suffix)
-    if ERROR_COUNT > 0: return False, return_value
+    if ERROR_COUNT > 0: return REGULAR_ERROR, return_value
     Datasetid_Set = set.union(*Dataset_List) # union all dataset id (to calculate multiplier)
     for datasetid in Datasetid_Set:
         dataset_name = set_suffix[datasetid]["categoty_name"]
@@ -483,14 +481,14 @@ def _check_regular_format(
         universe_full = Abbr_To_Full.get(universe_abbr, None)
         Region_Delay_Universe_List.append(f"{region_full}-{delay}-{universe_full}")
     logger.info(f"Check Regular Format ({account_no})", f"Region-Delay-Universe combinations: {Region_Delay_Universe_List}")
-    if ERROR_COUNT > 0: return False, return_value
+    if ERROR_COUNT > 0: return REGULAR_ERROR, return_value
     if Input_Region_Delay_Universe not in Region_Delay_Universe_List:
         error_str = (
             f"❌ Input region, delay, universe '{Input_Region_Delay_Universe}' does not match any "
             f"expected combinations for this regular. Combinations: {Region_Delay_Universe_List}."
         )
         logger.error(f"Check Regular Format ({account_no})", error_str)
-        return False, error_str
+        return REGULAR_ERROR, error_str
     logger.info(f"Check Regular Format ({account_no})", f"✅ Input region, delay, universe '{Input_Region_Delay_Universe}' matches the expected combinations.")
 
     # Check if the operators in the regular are valid (either in Python or in WQB functions)
@@ -502,8 +500,8 @@ def _check_regular_format(
             logger.error(f"Check Regular Format ({account_no})", error_str)
             ERROR_COUNT += 1
             return_value += error_str
-    if ERROR_COUNT > 0: return False, return_value
-    
+    if ERROR_COUNT > 0: return REGULAR_ERROR, return_value
+
     # Get combined multiplier
     multiplier = _combined_multiplier(Datasetname_Series, pyramid_multipliers, region, delay)
     logger.info(f"Check Regular Format ({account_no})", f"Combined Multiplier: {multiplier}")
@@ -512,7 +510,7 @@ def _check_regular_format(
         "Suffix_Series": Suffix_Series,
         "Combined_Multiplier": multiplier
     }
-    return True, output_dict
+    return False, output_dict
 
 def _validate_regular_formula(
     regular_formula: Optional[str], 
@@ -520,11 +518,9 @@ def _validate_regular_formula(
     account_no: str="N"
 ) -> Tuple[bool, str]:
     if not isinstance(regular_formula, str) or not regular_formula.strip():
-        return False, "regular is required for REGULAR alphas."
+        return REGULAR_ERROR, "regular is required for REGULAR alphas."
     formatted_formula = _format_regular_formula(regular_formula)
-    if len(_replace_regular_operators(formatted_formula)) > MAX_REGULAR_FORMULA_LENGTH:
-        return False, REGULAR_LENGTH_ERROR
-    success, result = _check_regular_format(
+    fail, result = _check_regular_format(
         formatted_formula, 
         field_set_suffix=FIELD_SET_SUFFIX, 
         set_suffix=SET_SUFFIX, 
@@ -534,9 +530,9 @@ def _validate_regular_formula(
         universe=universe,
         account_no=account_no
     )
-    if not success: return False, result
+    if fail: return REGULAR_ERROR, result
     result.update({"formatted_formula": formatted_formula})
-    return True, result
+    return False, result
 
 # Version 1: Login and Session Management (without local session loading)
 
@@ -642,7 +638,6 @@ def _load_session_from_file(account_no):
 
 def Login_to_WQB(
     account_no: str = "N",
-    Return_Permission: bool = False,
     Use_Local_Session: bool = True,
 ):
     """
@@ -673,9 +668,6 @@ def Login_to_WQB(
                 
                 if auth_check.status_code == 200:
                     logger.info(f"Log In ({account_no})", "Using local saved session.")
-                    if Return_Permission:
-                        permission_list = auth_check.json().get("permissions", [])
-                        return local_sess, str(tuple(permission_list))
                     return local_sess
                 
                 logger.info(f"Log In ({account_no})", "Local session is invalid. Re-authenticating...")
@@ -708,12 +700,6 @@ def Login_to_WQB(
 
     logger.info(f"Log In ({account_no})", str(status_code))
     logger.info(f"Log In ({account_no})", str(response.json()))
-
-    if Return_Permission:
-        permission_list = response.json().get("permissions", [])
-        permission_content = str(tuple(permission_list))
-        return sess, permission_content
-
     # save session as a local file
     _save_session_to_file(sess, account_no)
     return sess
@@ -822,7 +808,7 @@ def Alpha_IS_Check_New(IS_Check: list):
     {'SUPER_SUBMISSION': 1, 'COMBO_DESCRIPTION_LENGTH': 0, 'SELECTION_DESCRIPTION_LENGTH': 0}
     """
     SUBMITTED_DICT = {"name": "ALREADY_SUBMITTED", "result": "FAIL"}
-    if SUBMITTED_DICT in IS_Check: return False, ALREADY_SUBMITTED_ERROR
+    if SUBMITTED_DICT in IS_Check: return ALREADY_SUBMITTED_ERROR, "❌ This alpha has already been submitted. Please check the IS Check results for details."
     FAIL_EXCEPTION = {'SUPER_SUBMISSION', 'COMBO_DESCRIPTION_LENGTH', 'SELECTION_DESCRIPTION_LENGTH'}
     def Operate_Check_Info(check, DICT):
         NAME = IS_Check_Name_Dict.get(check['name'], 'Unknown')
@@ -883,7 +869,7 @@ def Alpha_IS_Check_New(IS_Check: list):
     IS_Check_New["FAIL"] = FAIL
     IS_Check_New["PENDING"] = PENDING
     IS_Check_New["WARNING"] = WARNING
-    return True, IS_Check_New
+    return False, IS_Check_New
 
 def _regular_error_detector(simulation_status: Dict[str, Any]) -> Tuple[bool, str, str]:
     status = simulation_status.get("status", "error")
@@ -894,13 +880,14 @@ def _regular_error_detector(simulation_status: Dict[str, Any]) -> Tuple[bool, st
         message_lower = message.lower()
         if "invalid data field" in message_lower:
             return True, DATAFIELDS_ERROR, message
-        if "operator" in message_lower:
+        elif "operator" in message_lower:
             return True, OPERATOR_ERROR, message
-        if "variable" in message_lower:
+        elif "variable" in message_lower:
             return True, VARIABLE_ERROR, message
-        if "unexpected character" in message_lower:
+        elif "unexpected character" in message_lower:
             return True, UNEXPECTED_CHARACTER, message
-        return True, message, "None"
+        else:
+            return True, UNKNOWN_ERROR, message
     if status == "error":
         return True, UNKNOWN_ERROR, "None"
     if status == "COMPLETE":
@@ -926,13 +913,13 @@ def Get_Self_Corr(SESS, alpha_id: str):
         break
     if result.status_code != 200:
         logger.info(f"Get Self Corr ({alpha_id})", f"❌ Error: HTTP {result.status_code}")
-        return False, {"error": f"HTTP {result.status_code}"}
+        return UNKNOWN_ERROR, f"HTTP {result.status_code}"
     corr_result = result.json()
     if corr_result.get("records", 0) == 0:
         logger.info(f"Get Self Corr ({alpha_id})", "❌ There is no record.")
-        return False, {"records": [], "schema": corr_result.get("schema", {})}
+        return CORR_NO_RECORD_ERROR, "There is no record."
     logger.info(f"Get Self Corr ({alpha_id})", f"✅ Correlation data retrieved successfully with {len(corr_result.get('records', []))} records.")
-    return True, corr_result
+    return False, corr_result
 
 def Get_Prod_Corr(SESS, alpha_id: str, account_no: str = "N"):
     time.sleep(5)
@@ -949,14 +936,14 @@ def Get_Prod_Corr(SESS, alpha_id: str, account_no: str = "N"):
         result_dict = result.json()
         if result_dict.get("records", 0) == 0:
             logger.info(f"Get-Prod-Corr ({account_no})", "❌ There is no record.")
-            return False, "❌ There is no record."
+            return CORR_NO_RECORD_ERROR, "❌ There is no record."
         logger.info(f"Get-Prod-Corr ({account_no})", f"✅ Correlation data retrieved successfully with {len(result_dict.get('records', []))} records.")
-        return True, result_dict
+        return False, result_dict
     status_code = result.status_code
-    if status_code == 401: return False, ERROR_401
-    if status_code == 429: return False, ERROR_429
+    if status_code == 401: return ERROR_401, "❌ Unauthorized access. Please check your session or credentials."
+    if status_code == 429: return ERROR_429, "❌ Too many requests. Please try again later."
     logger.info(f"Get-Prod-Corr ({account_no})", f"❌ Error: {status_code}")
-    return False, UNKNOWN_ERROR
+    return UNKNOWN_ERROR, "❌ An unknown error occurred."
 
 def Single_Alpha_IS_Summary(
     SESS,
@@ -974,10 +961,10 @@ def Single_Alpha_IS_Summary(
         content_length = int(alpha_resp_dict.get("Content-Length", 0))
         if not content_length:
             logger.info(f"EVALUATION-IS-Summary ({account_no})", "❌ IS Summary data is empty.")
-            return False, "❌ IS Summary " + EMPTY_CONTENT_ERROR
+            return EMPTY_CONTENT_ERROR, "❌ IS Summary data is empty."
         alpha_yearly_data = alpha_resp.json()
         if return_original_data:
-            return True, alpha_yearly_data
+            return False, alpha_yearly_data
         yearly_stats = []
         for year_data in alpha_yearly_data.get("records", []):
             year_dict = {
@@ -996,14 +983,14 @@ def Single_Alpha_IS_Summary(
             }
             yearly_stats.append(year_dict)
         logger.info(f"EVALUATION-IS-Summary ({account_no})", f"✅ IS Summary data retrieved successfully with {len(yearly_stats)} records.")
-        return True, yearly_stats
+        return False, yearly_stats
     status_code = alpha_resp.status_code
     if status_code == 401:
-        return False, ERROR_401
+        return ERROR_401, "❌ Unauthorized access. Please check your session or credentials."
     if status_code == 429:
-        return False, ERROR_429
+        return ERROR_429, "❌ Too many requests. Please try again later."
     logger.info(f"EVALUATION-IS-Summary ({account_no})", f"❌ Error: {status_code}")
-    return False, UNKNOWN_ERROR
+    return UNKNOWN_ERROR, "❌ An unknown error occurred."
 
 def Single_Alpha_Status(
     SESS,
@@ -1021,9 +1008,9 @@ def Single_Alpha_Status(
         content_length = int(alpha_resp_dict.get("Content-Length", 0))
         if not content_length:
             logger.info(f"EVALUATION-Alpha-Status ({account_no})", f"❌ Empty content in alpha status response. ({alpha_resp_dict})")
-            return False, "❌ Status " + EMPTY_CONTENT_ERROR
+            return EMPTY_CONTENT_ERROR, "❌ Status data is empty."
         alpha_data = alpha_resp.json()
-        if return_original_data: return True, alpha_data
+        if return_original_data: return False, alpha_data
         alpha_info = alpha_info or {}
         alpha_info["type"] = alpha_data.get("type")
         alpha_info["author"] = alpha_data.get("author")
@@ -1040,21 +1027,20 @@ def Single_Alpha_Status(
         alpha_info["dateModified"] = alpha_data.get("dateModified")
         grade = alpha_data.get("grade")
         is_checks = alpha_data.get("is", {}).get("checks", [])
-        success, is_checks_new = Alpha_IS_Check_New(is_checks)
-        if not success:
-            return False, is_checks_new
+        fail, is_checks_new = Alpha_IS_Check_New(is_checks)
+        if fail: return UNKNOWN_ERROR, is_checks_new
         alpha_info["is_checks"] = is_checks_new
         alpha_info["grade"] = grade
         alpha_info["status"] = alpha_data.get("status")
         logger.info(f"EVALUATION-Alpha-Status ({account_no})", f"✅ Alpha status retrieved successfully. Status: {alpha_info['status']}.")
-        return True, alpha_info
+        return False, alpha_info
     status_code = alpha_resp.status_code
     if status_code == 401:
-        return False, ERROR_401
+        return ERROR_401, "❌ Unauthorized access. Please check your session or credentials."
     if status_code == 429:
-        return False, ERROR_429
+        return ERROR_429, "❌ Too many requests. Please try again later."
     logger.info(f"EVALUATION-Alpha-Status ({account_no})", f"❌ Error: {status_code}")
-    return False, UNKNOWN_ERROR
+    return UNKNOWN_ERROR, "❌ An unknown error occurred."
 
 def Delete_Simulation_Session(SESS, session_id,  account_no="N"):
     time.sleep(1)
@@ -1062,11 +1048,9 @@ def Delete_Simulation_Session(SESS, session_id,  account_no="N"):
     alpha_resp = SESS.delete(api_url)
     if alpha_resp.status_code == 200: 
         logger.info(f"Delete-Simulation-Session ({account_no})", f"Session {session_id} Delete Successfully.")
-        return
     else:
         Status_Code = alpha_resp.status_code
         logger.error(f"Delete-Simulation-Session ({account_no})", f"Error: {Status_Code}")
-        return
 
 def Single_Alpha_Simulation(
     SESS,
@@ -1139,7 +1123,7 @@ def Single_Alpha_Simulation(
     sim_progress_url = sim_resp_dict.get("Location", None)
     if not sim_progress_url:
         sim_resp_json = sim_resp.json()
-        return False, str(sim_resp_json)
+        return UNKNOWN_ERROR, str(sim_resp_json)
 
     # Display rate limit info
     x_rate_limit = sim_resp_dict.get("X-Ratelimit-Limit", "None")
@@ -1217,19 +1201,18 @@ def Single_Alpha_Simulation(
                 f"{sim_progress_resp} (Request timeout num: {request_timeout_num})"
             )
         )
-        raise Exception(sim_progress_resp)
+        return UNKNOWN_ERROR, sim_progress_resp
 
     alpha_info_dict = sim_progress_resp.json()
     error, info, message = _regular_error_detector(alpha_info_dict)
     if error:
         logger.info(f"SIMULATION ({account_no})", f"Error due to {info} (Message: {message})")
-        return False, info
+        return info, message
     if info == WARNING_ERROR: logger.info(f"SIMULATION ({account_no})({INDEX})", f" ⛔Warning: {message}")
     alpha_id = alpha_info_dict.get("alpha")
-    if alpha_id:
-        alpha_info_dict.setdefault("settings", {}).update({"type": TYPE})
+    if alpha_id: alpha_info_dict.setdefault("settings", {}).update({"type": TYPE})
     logger.info(f"SIMULATION ({account_no})({INDEX})", f"({File_Name}) {alpha_id} generated.")
-    return True, alpha_info_dict
+    return False, alpha_info_dict
 
 def simulate_and_evaluate_alpha(
     alpha_settings,
@@ -1267,31 +1250,29 @@ def simulate_and_evaluate_alpha(
     if sess is None:
         sess = Login_to_WQB(account_no=account_no)
         if sess is None:
-            return False, "Login failed."
+            return UNKNOWN_ERROR, "Login failed."
     else:
         sess = Check_Session_Timeout(sess, account_no=account_no)
         if sess is None:
-            return False, "Session expired and re-login failed."
-
+            return UNKNOWN_ERROR, "Session expired and re-login failed."
     if not regular and alpha_settings.get("type", "REGULAR") == "REGULAR":
         regular = alpha_settings.get("regular", "")
-    # success, payload_or_error = _build_simulation_payload(alpha_settings, regular, account_no=account_no)
-    # if not success: return False, payload_or_error
-    # logger.info(f"SIMULATION-PAYLOAD ({account_no})", f"Payload built successfully: {sett}")
-
+    logger.info(f"SIMULATION ({account_no})", f"Starting simulation and evaluation process...")
+    logger.info(f"SIMULATION ({account_no})", f"Regular formula: {regular}")
+    logger.info(f"SIMULATION ({account_no})", f"Simulation settings: {alpha_settings}")
     sim_info = {}
     if not alpha_id:
-        success, sim_info = _retry_after(
+        fail, sim_info = _retry_after(
             FUNCTION=Single_Alpha_Simulation,
             SESS=sess,
             TYPE=alpha_settings.get("type", "REGULAR"),
             Settings_Dict=alpha_settings,
             account_no=account_no
         )
-        if not success: return False, sim_info
+        if fail: return False, sim_info
 
         alpha_id = sim_info.get("alpha") or sim_info.get("alpha_id")
-        if not alpha_id: return False, "Simulation succeeded but alpha id was missing."
+        if not alpha_id: return UNKNOWN_ERROR, "Simulation succeeded but alpha id was missing."
     
     # Simulation info output, including status and message for regular errors, and other info for successful simulation.
     sim_info_output = {}
@@ -1299,53 +1280,56 @@ def simulate_and_evaluate_alpha(
     simulation_message = sim_info.get("message", "")
     sim_info_output["status"] = simulation_status
     sim_info_output["message"] = simulation_message
+    logger.info(f"SIMULATION-INFO ({account_no})", f"Simulation status: {simulation_status}, output: {sim_info_output}")
 
-    success, status_info = _retry_after(
+    fail, status_info = _retry_after(
         FUNCTION=Single_Alpha_Status,
         SESS=sess,
         alpha_id=alpha_id,
         TYPE=alpha_settings.get("type", "REGULAR"),
         account_no=account_no
     )
-    if not success: return False, status_info
+    if fail: return UNKNOWN_ERROR, status_info
 
     evaluation_status = status_info.get("status", "")
     evaluation_is_checks = status_info.get("is_checks", [])
-    evaluation_settings = status_info.get("settings", {})
+    # evaluation_settings = status_info.get("settings", {})
 
-    success, is_summary = _retry_after(
-        FUNCTION=Single_Alpha_IS_Summary,
-        SESS=sess,
-        alpha_id=alpha_id,
-        account_no=account_no
-    )
-    if not success: return False, is_summary
+    # fail, is_summary = _retry_after(
+    #     FUNCTION=Single_Alpha_IS_Summary,
+    #     SESS=sess,
+    #     alpha_id=alpha_id,
+    #     account_no=account_no
+    # )
+    # if fail: return UNKNOWN_ERROR, is_summary
 
     evaluation = {
-        "settings": evaluation_settings,
+        # "settings": evaluation_settings,
         "status": evaluation_status,
         "is_checks": evaluation_is_checks,
-        "is_summary": is_summary,
+        # "is_summary": is_summary,
     }
+    logger.info(f"EVALUATION ({account_no})", f"Evaluation status: {evaluation_status}, output: {evaluation}")
 
     correlation = {}
     if include_self_corr:
-        self_success, self_corr = _retry_after(
+        self_fail, self_corr = _retry_after(
             FUNCTION=Get_Self_Corr,
             SESS=sess,
             alpha_id=alpha_id,
         )
-        correlation["self_corr"] = self_corr if self_success else {"error": self_corr}
+        correlation["self_corr"] = self_corr if not self_fail else {"error": self_corr}
     if include_prod_corr:
-        prod_success, prod_corr = _retry_after(
+        prod_fail, prod_corr = _retry_after(
             FUNCTION=Get_Prod_Corr,
             SESS=sess,
             alpha_id=alpha_id,
             account_no=account_no
         )
-        correlation["prod_corr"] = prod_corr if prod_success else {"error": prod_corr}
+        correlation["prod_corr"] = prod_corr if not prod_fail else {"error": prod_corr}
 
-    return True, {
+    logger.info(f"CORRELATION ({account_no})", f"Correlation results: {correlation}")
+    return False, {
         "simulation": sim_info_output,
         "evaluation": evaluation,
         "correlation": correlation,
@@ -1372,32 +1356,32 @@ def main(regular, settings, account_no="0"):
     # }
     
     # Step 1: Initialize global variables and build simulation payload
-    success, info = initialize_global_variables(account_no=account_no)
-    if not success: return info
+    fail, info = initialize_global_variables(account_no=account_no)
+    if fail: return info
     
     # Step 2: Build simulation payload
-    success, simulation_payload = _build_simulation_payload(settings, regular, account_no=account_no)
-    if not success: return simulation_payload
+    fail, simulation_payload = _build_simulation_payload(settings, regular, account_no=account_no)
+    if fail: return simulation_payload
     
     # Step 3: Validate regular formula and its compatibility with settings
-    success, validation_result = _validate_regular_formula(
+    fail, validation_result = _validate_regular_formula(
         regular_formula=regular, 
         region=simulation_payload.get("settings", {}).get("region"),
         delay=simulation_payload.get("settings", {}).get("delay"), 
         universe=simulation_payload.get("settings", {}).get("universe"), 
         account_no=account_no
     )
-    if not success: return validation_result
+    if fail: return validation_result
     
     # Step 4: Log in to WQB and run simulation, evaluation, and correlation
     SESS = Login_to_WQB(account_no=account_no)
-    success, result = simulate_and_evaluate_alpha(
+    fail, result = simulate_and_evaluate_alpha(
         alpha_settings=simulation_payload,
         regular=regular, # Optional if already included in simulation_payload
         account_no=account_no,
         sess=SESS,  # Optional: provide existing session to reuse
     )
-    if success: logger.info("Main", json.dumps(result, indent=4))
+    if not fail: logger.info("Main", result)
     else: return result
 
 # Determine if we are running standalone or being imported

@@ -19,14 +19,24 @@ ALREADY_SUBMITTED_ERROR = "ALREADY_SUBMITTED"
 DATAFIELDS_ERROR = "DataFields Error"
 OPERATOR_ERROR = "Operator Error"
 VARIABLE_ERROR = "Variable Error"
+PAYLOAD_ERROR = "Payload Error"
+INVALID_VALUE_ERROR = "Invalid Value"
+CORR_NO_RECORD_ERROR = "Correlation No Record Error"
 UNEXPECTED_CHARACTER = "Unexpected character"
 WARNING_ERROR = "Warning Error"
-MAX_REGULAR_FORMULA_LENGTH = 171
 REGULAR_ERROR = "Regular Error"
-REGULAR_LENGTH_ERROR = "Regular Length Error"
 PERMISSION_ERROR = "Location"
 NONETYPE_GET_ERROR = "'NoneType' object has no attribute 'get'" # Invalid session or credentials (Login failed)
 NONETYPE_POST_ERROR = "'NoneType' object has no attribute 'post'" # Invalid session or credentials (Login failed)
+
+NON_RETRYABLE_ERRORS = {
+    PERMISSION_ERROR, NONETYPE_GET_ERROR, 
+    NONETYPE_POST_ERROR, EMPTY_CONTENT_ERROR, 
+    ALREADY_SUBMITTED_ERROR, DATAFIELDS_ERROR,
+    OPERATOR_ERROR, VARIABLE_ERROR, UNEXPECTED_CHARACTER, 
+    REGULAR_ERROR, ERROR_401, PAYLOAD_ERROR, CORR_NO_RECORD_ERROR
+}
+
 OPERATOR_DICT = {
     "*": "×",
     "/": "÷",
@@ -134,7 +144,7 @@ Abbr_To_Full = {value: key for key, value in Setting_Abbr.items()}
 
 REGION = {"USA", "GLB", "EUR", "ASI", "CHN", "IND", "KOR", "TWN", "MEA"} # 🚨 for  consultant gold
 
-UNIVERSER = {
+UNIVERSE = {
     "USA": {"TOP3000", "TOP2000", "TOP1000", "TOP500", "TOP200", "TOPSP500", "ILLIQUID_MINVOL1M"},
     "GLB": {"TOP3000", "MINVOL1M", "MINVOL10M", "TOPDIV3000"},
     "EUR": {"TOP2500", "TOP1200", "TOP800", "TOP400", "ILLIQUID_MINVOL1M", "TOPCS1600"},
@@ -165,19 +175,28 @@ DEFAULT_SETTINGS = {
 } # default settings for all regions, can be updated by user input
 
 MAX_TRADE = {
-    "USA": {"ON", "OFF"},
-    "GLB": {"ON", "OFF"},
-    "EUR": {"ON", "OFF"},
-    "ASI": {"ON", "OFF"},
-    "CHN": {"ON", "OFF"},
-    "IND": {"ON", "OFF"},
-    # for grand consultant
-    "JPN": {"ON", "OFF"},
-    "HKG": {"ON", "OFF"},
-    "KOR": {"ON", "OFF"},
-    "TWN": {"ON", "OFF"},
-    "MEA": {"ON", "OFF"} # New since 2026-05
+    "USA": {"ON", "OFF"}, # ✅
+    "GLB": {"ON", "OFF"}, # ✅
+    "EUR": {"ON", "OFF"}, # ✅
+    "ASI": {"ON", "OFF"}, # ✅
+    "CHN": {"ON", "OFF"}, # ✅
+    "IND": {"ON", "OFF"}, # ✅
+    "KOR": {"ON", "OFF"}, # ✅
+    "TWN": {"ON", "OFF"}, # ✅
+    "MEA": {"ON", "OFF"} # New since 2026-05 ✅
 } # 🚨 for consultant gold
+
+MAX_POSITION = {
+    "USA": {"ON", "OFF"}, # ✅
+    "GLB": {"OFF"}, # ✅
+    "EUR": {"ON", "OFF"}, # ✅
+    "ASI": {"ON", "OFF"}, # ✅
+    "CHN": {"OFF"}, # ✅
+    "IND": {"OFF"}, # ✅
+    "KOR": {"OFF"}, # ✅
+    "TWN": {"OFF"}, # ✅
+    "MEA": {"ON", "OFF"}, # New since 2026-05 ✅
+} # 🚨 Complete Max Position Dict (for consultant gold)
 
 FULL_NEUTRALIZATION = {
     "MARKET", "SECTOR", "INDUSTRY", 

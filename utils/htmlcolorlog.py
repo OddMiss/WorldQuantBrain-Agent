@@ -3,7 +3,6 @@ import sys
 import re
 from contextlib import contextmanager
 from ansi2html import Ansi2HTMLConverter
-import re
 
 # ====================== ELEGANT LOGGING ENGINE ======================
 class PipelineLogger:
@@ -16,24 +15,18 @@ class PipelineLogger:
     We store the raw color data in memory (io.StringIO) and write the HTML directly from RAM. 
     No .tmp files, no WinError 32 crashes.
     """
-    def __init__(self, text_path, html_path):
+    def __init__(self, html_path):
         self.original_stdout = sys.stdout
-        self.text_path = text_path
         self.html_path = html_path
         self.ansi_buffer = io.StringIO() # Stores color data in RAM, no temp files!
-        self.text_file = open(text_path, 'a', encoding='utf-8')
-        self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
     def write(self, data):
         self.original_stdout.write(data)                    # 1. Output to real terminal
         self.ansi_buffer.write(data)                        # 2. Save to RAM for HTML
-        clean_data = self.ansi_escape.sub('', data)         # 3. Strip colors
-        self.text_file.write(clean_data)                    # 4. Save clean text to file
         self.flush()
 
     def flush(self):
         self.original_stdout.flush()
-        self.text_file.flush()
 
     def isatty(self):
         # Trick third-party libraries into keeping colors enabled
@@ -88,12 +81,11 @@ class PipelineLogger:
             print("\n[WARNING] 'ansi2html' not installed. HTML log skipped.")
         finally:
             self.ansi_buffer.close()
-            self.text_file.close()
 
 @contextmanager
-def capture_and_log(text_path, html_path):
+def capture_and_log(html_path):
     """Context manager to safely wrap the execution block."""
-    interceptor = PipelineLogger(text_path, html_path)
+    interceptor = PipelineLogger(html_path)
     sys.stdout = interceptor
     try:
         yield  # Run whatever is inside the 'with' block

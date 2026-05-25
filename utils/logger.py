@@ -20,6 +20,24 @@ class FlagLogger:
     def debug(self, flag, msg, *args, **kwargs):
         self.logger.debug(msg, *args, extra={"flag": flag}, **kwargs)
 
+class DynamicStreamHandler(logging.StreamHandler):
+    """
+    A StreamHandler that dynamically looks up sys.stdout or sys.stderr
+    at the time of log emission, adapting perfectly to context-manager overrides.
+    """
+    def __init__(self, stream_attr="stdout"):
+        super().__init__()
+        self._stream_attr = stream_attr
+
+    @property
+    def stream(self):
+        return getattr(sys, self._stream_attr)
+
+    @stream.setter
+    def stream(self, value):
+        # Absorb static assignments from the parent constructor
+        pass
+
 # ====================== INITIALIZE LOGGER ======================
 def setup_logger(log_dir, log_name, logger_obj_name="logger_obj_name"):
     """
@@ -62,8 +80,8 @@ def setup_logger(log_dir, log_name, logger_obj_name="logger_obj_name"):
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
 
-    # --- Handler 2: Console output (concise, for human reading) ---
-    console_handler = logging.StreamHandler(sys.stdout)
+    # --- 💡 FIX: Handler 2: Console output (dynamically follows sys.stdout) ---
+    console_handler = DynamicStreamHandler("stdout")
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 

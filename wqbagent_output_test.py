@@ -22,21 +22,45 @@ for directory in [CHROMA_DIR, HF_CACHE_DIR, PIP_CACHE_DIR, BGEM3_DIR, LOG_DIR]:
 
 # Define file paths for our transcript and HTML logs
 timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-TRANSCRIPT_FILE = os.path.join(LOG_DIR, f"wqb_agent-{timestamp}.transcript.txt")
 HTML_FILE = os.path.join(LOG_DIR, f"wqb_agent-{timestamp}.html")
 
 logger = setup_logger(LOG_DIR, "wqb_agent_test", "wqb_main_logger")
 
 # ====================== YOUR GEMINI CLIENT ======================
 logger.info("Main", "Initializing LLM client...")
+
+base_moonshot_url = "https://api.moonshot.cn/v1"
+model_moonshot_url = "https://api.moonshot.cn/v1/models"
+pro_moonshot_model = "moonshot/kimi-k2.5"  # temperature must be 1
+flash_moonshot_model = "moonshot/moonshot-v1-128k"
+
+base_deepseek_url = "https://api.deepseek.com/v1"
+model_deepseek_url = "https://api.deepseek.com/v1/models"
+pro_deepseek_model = "deepseek/deepseek-v4-pro"
+flash_deepseek_model = "deepseek/deepseek-v4-flash"
+
+base_gemini_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+model_gemini_url = "https://generativelanguage.googleapis.com/v1beta/openai/models"
+pro_gemini_model = "openai/gemini-3.1-pro"
+flash_gemini_model = "openai/gemini-3.0-flash-thinking"
+
+base_local_googlecloud = "http://127.0.0.1:8000/v1"
+model_local_googlecloud = "http://127.0.0.1:8000/v1/models"
+pro_googlecloud_model = "openai/gemini-2.5-pro"
+flash_googlecloud_model = "openai/gemini-2.5-flash"
+
+base_url = base_moonshot_url
+flash_model = flash_moonshot_model
+API_KEY = API_KEY_MOONSHOT
+
 llm = LLM(
-    model="moonshot/moonshot-v1-32k",   
-    base_url="https://api.moonshot.cn/v1",
-    api_key=API_KEY_MOONSHOT,
+    model=flash_model,   
+    base_url=base_url,
+    api_key=API_KEY,
     temperature=0.6,          
     max_tokens=8192,
     timeout=180,              
-    max_retries=5,            
+    max_retries=3,            
 )
 
 # -------------------------------------------------------------------------
@@ -51,9 +75,9 @@ def dummy_search(query: str) -> str:
 
     # 💡 CRITICAL TEST CHECKPOINT 1: Direct terminal bypass print
     # If you see this but NOT the logger line, capture_and_log is swallowing your logger stream.
-    print(f"\n[SYSTEM BLOCK BYPASS] >>> Python executed tool 'Dummy_Search' with query: '{query}'", flush=True)
+    print(f"\n[PRINT] >>> Python executed tool 'Dummy_Search' with query: '{query}'", flush=True)
 
-    logger.info("Dummy Search", f"🔍 Tool Called: 'Dummy_Search' | Query: '{query}'")
+    logger.info("Dummy Search Log", f"🔍 Tool Called: 'Dummy_Search' | Query: '{query}'")
     return "This is dummy data. Tell the user the test is successful."
 
 # ====================== AGENT (Simplified) ======================
@@ -71,7 +95,7 @@ tester_agent = Agent(
 # ====================== TASK & CREW (Simplified) ======================
 logger.info("Main", "Defining Tasks and assembling Crew...")
 task1 = Task(
-    description="Call the Dummy_Search tool with the query 'test formatting'. Then format your final answer in Chinese and English.",
+    description="{user_request}, Call the Dummy_Search tool with the query 'test formatting'. Then format your final answer in Chinese and English.",
     expected_output="A short bilingual success message.",
     agent=tester_agent
 )
@@ -89,13 +113,13 @@ if __name__ == "__main__":
     # 💡 CRITICAL TEST CHECKPOINT 2: Verifying console logging BEFORE stream capturing starts
     logger.info("Main", "Testing baseline console output capability...")
 
-    with capture_and_log(TRANSCRIPT_FILE, HTML_FILE):
-        user_request = "Run a quick ANSI color and HTML pipe test."
+    with capture_and_log(HTML_FILE):
+        user_request = "Run a quick ANSI color and HTML pipe test"
 
         # 💡 CRITICAL TEST CHECKPOINT 3: Inside the stream capturing block
         # If this doesn't show up in terminal instantly, capture_and_log is missing stream flushing.
-        print(f"\n[STREAM CHECK] Starting execution tracking. If you see this, stdout redirection is running.\n", flush=True)
-
+        print(f"\n[STREAM CHECK PRINT] Starting execution tracking. If you see this, stdout redirection is running.\n", flush=True)
+        logger.info("Main", "✅ Stream capture started successfully.")
         logger.info("Main", f"🚀 Kickstarting Crew process with input: '{user_request}'")
         
         try:
