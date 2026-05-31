@@ -3,7 +3,7 @@ import sys
 import datetime
 # Ensure current directory is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config.api_key import API_KEY_MOONSHOT
+from config.api_key import API_KEY_MOONSHOT, API_KEY_GOOGLE_CLOUD
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import tool
 from utils.htmlcolorlog import capture_and_log
@@ -49,9 +49,9 @@ model_local_googlecloud = "http://127.0.0.1:8000/v1/models"
 pro_googlecloud_model = "openai/gemini-2.5-pro"
 flash_googlecloud_model = "openai/gemini-2.5-flash"
 
-base_url = base_moonshot_url
-flash_model = flash_moonshot_model
-API_KEY = API_KEY_MOONSHOT
+base_url = base_local_googlecloud
+flash_model = flash_googlecloud_model
+API_KEY = API_KEY_GOOGLE_CLOUD
 
 llm = LLM(
     model=flash_model,   
@@ -78,6 +78,8 @@ def dummy_search(query: str) -> str:
     print(f"\n[PRINT] >>> Python executed tool 'Dummy_Search' with query: '{query}'", flush=True)
 
     logger.info("Dummy Search Log", f"🔍 Tool Called: 'Dummy_Search' | Query: '{query}'")
+    logger.info("Dummy Search Log", "✅ Tool execution logged successfully.")
+    logger.info("Dummy Search Log", "💡 If you see this log in the terminal, logging is working correctly even with stream redirection.")
     return "This is dummy data. Tell the user the test is successful."
 
 # ====================== AGENT (Simplified) ======================

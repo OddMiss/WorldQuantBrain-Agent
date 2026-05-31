@@ -7,6 +7,10 @@ from langchain_chroma import Chroma
 from langchain_classic.retrievers import MergerRetriever
 from crewai.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
+# Conceptual Fix: Wrap your MergerRetriever in a ContextualCompressionRetriever
+from langchain_community.document_compressors import FlashrankRerank
+from langchain_classic.retrievers import ContextualCompressionRetriever
+from flashrank import Ranker
 from config.config import Abbr_To_Full, DELAY, UNIVERSE, NEUTRALIZATION_DICT
 from config.api_key import (
     API_KEY_MOONSHOT, API_KEY_GEMINI_C26, API_KEY_GEMINI_CU, 
@@ -151,7 +155,7 @@ llm_creative = LLM(
     model=pro_googlecloud_model,      # via your Vertex proxy
     base_url=base_local_googlecloud,
     api_key=API_KEY_GOOGLE_CLOUD,
-    temperature=0.3,
+    temperature=0.7,
 )
 logger.info("Main", f"Initialized Creative LLM with model: {pro_googlecloud_model} and base URL: {base_local_googlecloud}")
 
@@ -186,7 +190,7 @@ def Combine_Multiple_Embedding_Databases(embedding_db_directories, embeddings):
         # Create a retriever for it
         # Note: If you set k=8 here, each DB will return 8 docs. 
         # With 5 databases, you'll get up to 40 documents back initially.
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 6})
         retrievers.append(retriever)
     # 3. Combine all individual retrievers into one
     combined_retriever = MergerRetriever(retrievers=retrievers)
@@ -197,7 +201,26 @@ def Combine_Multiple_Embedding_Databases(embedding_db_directories, embeddings):
     # combined_retriever.invoke("alpha")
     return combined_retriever
 
-combined_retriever = Combine_Multiple_Embedding_Databases(EMBEDDING_DB_DIRECTORIES, embeddings)
+# Build the base multi-database retriever
+base_combined_retriever = Combine_Multiple_Embedding_Databases(EMBEDDING_DB_DIRECTORIES, embeddings)
+
+# Initialize the Flashrank engine using your explicit 'Ranker' import
+# This allows you to route the lightweight cross-encoder model through your existing HF cache directory
+flashrank_client = Ranker(
+    model_name="ms-marco-MiniLM-L-12-v2", 
+    cache_dir=str(HF_CACHE_DIR)
+)
+
+# Wrap it in the LangChain Community Compressor component
+compressor = FlashrankRerank(client=flashrank_client, top_n=5)
+
+# 4. Finalize the pipeline using ContextualCompressionRetriever from langchain_classic
+final_ranker_retriever = ContextualCompressionRetriever(
+    base_compressor=compressor, 
+    base_retriever=base_combined_retriever
+)
+
+logger.info("Retriever Initialization", "🚀 Advanced Retriever-Ranker pipeline successfully wired up.")
 
 # ====================== DOCS SEARCH TOOL ======================
 @tool("retrieve_text_data")
@@ -211,7 +234,7 @@ def retrieve_text_data(query: str) -> str:
         str: Concatenated relevant document snippets separated by ---.
              Returns "No relevant documents found." if nothing matches.
     """
-    docs = combined_retriever.invoke(query)
+    docs = final_ranker_retriever.invoke(query)
     output = "\n---\n".join([doc.page_content for doc in docs])
     output_cleaned = clean_community_data(output)  # Clean redundant data
     return output_cleaned
@@ -426,13 +449,18 @@ validator = Agent(
     backstory="""You are the final gatekeeper and debugging expert. You never pass a broken alpha.
     
     Strictly follow the workflow:
-    1. Use get_region_allowed_settings
-    2. Use check_regular_formula
-    3. Use wqb_simulate_api and analyze the JSON output
-    4. Iterate up to 4 times if needed (fix errors or failing IS checks).
+    1. Use get_region_allowed_settings to confirm valid parameters.
+    2. Use check_regular_formula to validate syntax and data fields.
+    3. Use wqb_simulate_api and analyze the JSON output.
+    4. If wqb_simulate_api or check_regular_formula returns an error (e.g., syntax broken, data field doesn't exist):
+       - DO NOT GUESS. 
+       - Immediately use `search_datafields` to find the correct field name or similar valid fields.
+       - Immediately use `search_operators` to verify the exact syntax of the operator causing the failure.
+    5. Iterate and fix the formula up to 4 times if needed.
     
     Never pass a broken alpha.""",
-    tools=[check_regular_formula, get_region_allowed_settings, wqb_simulate_api],  # Equipped with the real tools
+    # Add search_operators and search_datafields here:
+    tools=[check_regular_formula, get_region_allowed_settings, wqb_simulate_api, search_operators, search_datafields],  
     llm=llm_pro,
     verbose=True,
     allow_delegation=False
@@ -514,7 +542,7 @@ task4 = Task(
     5. Repeat up to 4 times if necessary.
     
     STRICT OUTPUT RULE:
-    Output ONLY the final working alpha. No extra explanations, no debugging notes, no reasoning outside the required format.
+    Output the final working alpha(s) with explanations, debugging notes, and reasoning.
     """,
     expected_output="""Final output in this EXACT format only:
     **Alpha Name:** ...

@@ -8,6 +8,10 @@ from pathlib import Path
 from crewai import Agent, Task, Crew, Process, LLM
 from langchain_chroma import Chroma
 from langchain_classic.retrievers import MergerRetriever
+# Conceptual Fix: Wrap your MergerRetriever in a ContextualCompressionRetriever
+from langchain_community.document_compressors import FlashrankRerank
+from langchain_classic.retrievers import ContextualCompressionRetriever
+from flashrank import Ranker
 from crewai.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from config.config import Abbr_To_Full
@@ -114,7 +118,32 @@ def Combine_Multiple_Embedding_Databases(embedding_db_directories, embeddings):
     # combined_retriever.invoke("alpha")
     return combined_retriever
 
-combined_retriever = Combine_Multiple_Embedding_Databases(EMBEDDING_DB_DIRECTORIES, embeddings)
+# Build the base multi-database retriever
+base_combined_retriever = Combine_Multiple_Embedding_Databases(EMBEDDING_DB_DIRECTORIES, embeddings)
+
+# Initialize the Flashrank engine using your explicit 'Ranker' import
+# This allows you to route the lightweight cross-encoder model through your existing HF cache directory
+flashrank_client = Ranker(
+    model_name="ms-marco-MiniLM-L-12-v2", 
+    cache_dir=str(HF_CACHE_DIR)
+)
+
+# Wrap it in the LangChain Community Compressor component
+compressor = FlashrankRerank(client=flashrank_client, top_n=5)
+
+# optional
+# compressor = FlashrankRerank(
+#     model="ms-marco-MiniLM-L-12-v2",
+#     top_n=5
+# )
+
+# 4. Finalize the pipeline using ContextualCompressionRetriever from langchain_classic
+final_ranker_retriever = ContextualCompressionRetriever(
+    base_compressor=compressor, 
+    base_retriever=base_combined_retriever
+)
+
+logger.info("Retriever Initialization", "🚀 Advanced Retriever-Ranker pipeline successfully wired up.")
 
 # ====================== DOCS SEARCH TOOL ======================
 @tool("retrieve_text_data_test")
@@ -124,7 +153,7 @@ def retrieve_text_data_test(query: str) -> str:
     Returns text context to be used for answering user queries."""
     
     # If is_test is True, return only the first 500 characters to avoid overwhelming the test output
-    docs = combined_retriever.invoke(query)
+    docs = final_ranker_retriever.invoke(query)
     result = "\n\n---\n\n".join([doc.page_content for doc in docs])
     logger.info("RETRIEVE TEXT DATA TEST", f"Original retrieved text length: {len(result)} characters")
     return result[:500] + "..."  # Return only the first 500 characters for testing

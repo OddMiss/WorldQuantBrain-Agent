@@ -10,6 +10,7 @@ langchain-huggingface
 # CrewAI Ecosystem
 crewai
 crewai-tools
+flashrank
 
 # Embeddings & Models
 sentence-transformers

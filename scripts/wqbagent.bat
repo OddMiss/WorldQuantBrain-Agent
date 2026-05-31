@@ -16,7 +16,7 @@ echo 🚀 Starting WorldQuant Brain Agent Pipeline...
 echo ========================================================
 
 :: 3. Run the script normally without ANY redirection or pipes
-"%PYTHON_EXE%" -u "wqbagent_v2_2.py"
+"%PYTHON_EXE%" -u "wqbagent_v2_3.py"
 
 echo.
 echo ✅ Process Complete! 

@@ -717,7 +717,7 @@ def Check_Session_Timeout(
     """
     if SESS is None:
         logger.info(f"Check Session Timeout ({account_no})", "Session is None...")
-        return None
+        return Login_to_WQB(account_no=account_no, Use_Local_Session=False)
 
     authentication_url = "https://api.worldquantbrain.com/authentication"
     result = SESS.get(authentication_url)
@@ -917,7 +917,7 @@ def Get_Self_Corr(SESS, alpha_id: str):
     corr_result = result.json()
     if corr_result.get("records", 0) == 0:
         logger.info(f"Get Self Corr ({alpha_id})", "❌ There is no record.")
-        return CORR_NO_RECORD_ERROR, "There is no record."
+        return CORR_NO_RECORD_ERROR, "There is no record. It is not an error. It means there is no correlation data available for this alpha."
     logger.info(f"Get Self Corr ({alpha_id})", f"✅ Correlation data retrieved successfully with {len(corr_result.get('records', []))} records.")
     return False, corr_result
 
@@ -936,7 +936,7 @@ def Get_Prod_Corr(SESS, alpha_id: str, account_no: str = "N"):
         result_dict = result.json()
         if result_dict.get("records", 0) == 0:
             logger.info(f"Get-Prod-Corr ({account_no})", "❌ There is no record.")
-            return CORR_NO_RECORD_ERROR, "❌ There is no record."
+            return CORR_NO_RECORD_ERROR, "❌ There is no record. It is not an error. It means there is no correlation data available for this alpha."
         logger.info(f"Get-Prod-Corr ({account_no})", f"✅ Correlation data retrieved successfully with {len(result_dict.get('records', []))} records.")
         return False, result_dict
     status_code = result.status_code
@@ -1318,7 +1318,11 @@ def simulate_and_evaluate_alpha(
             SESS=sess,
             alpha_id=alpha_id,
         )
-        correlation["self_corr"] = self_corr if not self_fail else {"error": self_corr}
+        if not self_fail: 
+            # keep only "max" and "min" keys in self_corr
+            self_corr_min_max = {k: v for k, v in self_corr.items() if k in ["max", "min"]}
+            correlation["self_corr"] = self_corr_min_max
+        else: correlation["self_corr"] = {"message": self_corr}
     if include_prod_corr:
         prod_fail, prod_corr = _retry_after(
             FUNCTION=Get_Prod_Corr,
@@ -1326,7 +1330,11 @@ def simulate_and_evaluate_alpha(
             alpha_id=alpha_id,
             account_no=account_no
         )
-        correlation["prod_corr"] = prod_corr if not prod_fail else {"error": prod_corr}
+        if not prod_fail: 
+            # keep only "max" and "min" keys in prod_corr
+            prod_corr_min_max = {k: v for k, v in prod_corr.items() if k in ["max", "min"]}
+            correlation["prod_corr"] = prod_corr_min_max
+        else: correlation["prod_corr"] = {"message": prod_corr}
 
     logger.info(f"CORRELATION ({account_no})", f"Correlation results: {correlation}")
     return False, {
