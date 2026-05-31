@@ -6,12 +6,13 @@ Local CrewAI-based toolkit (v2.3) for building embeddings from WorldQuant Brain 
 
 - `wqbagent_v2_3.py`: v2.3 CrewAI pipeline (retrieval tools, LLM routing, and simulation integration).
 - `wqbagent_embedding.ipynb`: embedding build notebook for PDF/text sources.
+- `wqbagent_pdf2text.ipynb`: batch PDF-to-text extraction helper (optional preprocessing).
 - `wqbagent-v2.3.ipynb`: interactive notebook for the full v2.3 agent workflow.
 - `wqbagent_output_test.py`, `wqbagent_output_test.ipynb`: output/log formatting and LLM connectivity checks (update `BASE_DIR` if needed).
 - `wqbquant_searchtool_test.py`, `wqbquant_searchtool_test.ipynb`: health check helper for search/retrieval tools.
 - `wqbagentcore/`: core modules (LLM setup, embeddings, tools, crews).
 - `wqb_api/`: WorldQuant Brain API client and simulation helpers.
-- `config/`: configuration constants (plus gitignored API keys).
+- `config/`: configuration constants and provider notes (see `config/api-doc.ipynb`, plus gitignored API keys).
 - `utils/`: logging and data-cleanup helpers.
 - `materials/`: reference materials and notes.
 - `scripts/`: Windows batch helpers and launchers.
@@ -24,6 +25,7 @@ Local CrewAI-based toolkit (v2.3) for building embeddings from WorldQuant Brain 
 - Windows is recommended for the provided launch scripts (they can be adapted for other OSes).
 - Access to an OpenAI-compatible LLM endpoint (Moonshot, DeepSeek, Gemini, or a local proxy).
 - WorldQuant Brain credentials if you plan to run the simulator API.
+- JupyterLab if you plan to run the notebooks.
 
 ## Setup
 
@@ -68,15 +70,16 @@ Local CrewAI-based toolkit (v2.3) for building embeddings from WorldQuant Brain 
 
 ## Build embeddings and retrieval
 
-1. Update `BASE_DIR` and doc paths in `wqbagent_embedding.ipynb` if you keep data outside the repo.
-2. Run the embedding build workflow (recommended: `wqbagent_embedding.ipynb`):
+1. (Optional) Use `wqbagent_pdf2text.ipynb` to combine PDFs into text files if you prefer text-only ingestion.
+2. Update `BASE_DIR` and doc paths in `wqbagent_embedding.ipynb` if you keep data outside the repo.
+3. Run the embedding build workflow (recommended: `wqbagent_embedding.ipynb`):
 
    ```powershell
    jupyter lab
    ```
 
-3. Execute the ingestion cells once to build the embedding DBs.
-4. Embeddings are stored under `embedding_db/` with v2.3 subfolders:
+4. Execute the ingestion cells once to build the embedding DBs.
+5. Embeddings are stored under `embedding_db/` with v2.3 subfolders:
 
    - `wqb_forum_china_embedding_db`
    - `wqb_forum_global_embedding_db`
