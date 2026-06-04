@@ -3,7 +3,7 @@ import sys
 import datetime
 # Ensure current directory is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config.api_key import API_KEY_MOONSHOT, API_KEY_GOOGLE_CLOUD
+from config.api_key import API_KEY_MOONSHOT, API_KEY_GOOGLE_CLOUD, API_KEY_DEEPSEEK
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import tool
 from utils.htmlcolorlog import capture_and_log
@@ -49,9 +49,9 @@ model_local_googlecloud = "http://127.0.0.1:8000/v1/models"
 pro_googlecloud_model = "openai/gemini-2.5-pro"
 flash_googlecloud_model = "openai/gemini-2.5-flash"
 
-base_url = base_local_googlecloud
-flash_model = flash_googlecloud_model
-API_KEY = API_KEY_GOOGLE_CLOUD
+base_url = base_deepseek_url
+flash_model = flash_deepseek_model
+API_KEY = API_KEY_DEEPSEEK  # <-- Make sure to set this in your config/api_key.py
 
 llm = LLM(
     model=flash_model,   

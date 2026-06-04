@@ -62,6 +62,9 @@ def setup_logger(log_dir, log_name, logger_obj_name="logger_obj_name"):
     # 3. Create Logger object
     logger.setLevel(logging.INFO) # Set the minimum logger level
 
+    # 🚨 FIX PART: Tell this logger NEVER to pass messages up to the Root Logger!
+    logger.propagate = False  # <--- ADD THIS LINE HERE 🎉
+
     # --- Define a unified format (time accurate to the second) ---
     # %(asctime)s : Time
     # %(levelname)s : Log level (INFO/ERROR)

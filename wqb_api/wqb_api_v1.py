@@ -872,29 +872,27 @@ def Alpha_IS_Check_New(IS_Check: list):
     return False, IS_Check_New
 
 def _regular_error_detector(simulation_status: Dict[str, Any]) -> Tuple[bool, str, str]:
-    status = simulation_status.get("status", "error")
-    if status == "ERROR":
-        message = simulation_status.get("message", None)
-        if not message:
-            return True, str(simulation_status), UNKNOWN_ERROR
-        message_lower = message.lower()
-        if "invalid data field" in message_lower:
-            return True, DATAFIELDS_ERROR, message
-        elif "operator" in message_lower:
-            return True, OPERATOR_ERROR, message
-        elif "variable" in message_lower:
-            return True, VARIABLE_ERROR, message
-        elif "unexpected character" in message_lower:
-            return True, UNEXPECTED_CHARACTER, message
-        else:
-            return True, UNKNOWN_ERROR, message
-    if status == "error":
-        return True, UNKNOWN_ERROR, "None"
-    if status == "COMPLETE":
-        return False, "COMPLETE", "None"
-    if status == "WARNING":
-        return False, WARNING_ERROR, simulation_status.get("message", "")
-    return False, status, "None"
+    Status = simulation_status.get("status", "error")
+    if Status == "ERROR":
+        # In official multi-simulation, main session id dict doesn't contain message key
+        # Tnstead, children id contains message key
+        Message = simulation_status.get("message", None)
+        Message_Lower = Message.lower()
+        if not Message: return True, str(simulation_status), UNKNOWN_ERROR
+        if "data field" in Message_Lower: return True, DATAFIELDS_ERROR, Message
+        if "operator" in Message_Lower: return True, OPERATOR_ERROR, Message
+        if "variable" in Message_Lower: return True, VARIABLE_ERROR, Message
+        if "unexpected character" in Message_Lower: return True, UNEXPECTED_CHARACTER, Message
+        if "invalid" in Message_Lower: return True, INVALID_ERROR, Message
+        if "incorrect dimension" in Message_Lower: return True, INCORRECT_DIMENSION_ERROR, Message
+        if "attribute" in Message_Lower: return True, ATTRIBUTE_ERROR, Message
+        return True, Message, "None"
+    elif Status == "error": return True, DICT_DOESNOT_EXIST, "None"
+    elif Status == "COMPLETE": return False, "COMPLETE", "None"
+    elif Status == "WARNING":
+        Message = simulation_status["message"]
+        return False, WARNING_ERROR, Message
+    else: return True, UNKNOWN_ERROR, "None"
 
 def _get_retry_after(headers: Dict[str, Any]) -> float:
     retry_after = headers.get("Retry-After") or headers.get("retry-after")
@@ -1165,6 +1163,8 @@ def Single_Alpha_Simulation(
             if float(sim_progress_resp_dict.get("Content-Length", 0)) > 0: new_progress = sim_progress_resp.json().get("progress", 0)
             else: logger.info(f"SIMULATION ({account_no})", f"🔥 Progress: {sim_progress_resp_dict}")
             if new_progress != progress: 
+                # The progress endpoint may return 0 when the simulation is complete, so we set it to 1 in that case for better visualization of the progress bar.
+                if progress == 0.8: new_progress = 1
                 logger.info(f"SIMULATION ({account_no})", f"🔥 Progress: {new_progress}")
                 progress = new_progress
         except requests.exceptions.Timeout:
@@ -1193,15 +1193,14 @@ def Single_Alpha_Simulation(
         SIMULATION_RETRY_TIMEOUT_ERROR,
         SIMULATION_REQUEST_TIMEOUT_ERROR,
         UNKNOWN_ERROR,
-    }:
+    } or isinstance(sim_progress_resp, Exception):
+        # sim_progress_resp may be from except requests.exceptions.RequestException as e (like: ProxyError)
         logger.info(
             f"SIMULATION ({account_no})",
-            (
-                "Timeout Error due to "
-                f"{sim_progress_resp} (Request timeout num: {request_timeout_num})"
-            )
+            f"Simulation failed due to: {repr(sim_progress_resp)} (Request timeout num: {request_timeout_num})"
         )
-        return UNKNOWN_ERROR, sim_progress_resp
+        # Return a standard error tuple so the caller can handle it gracefully
+        return UNKNOWN_ERROR, str(sim_progress_resp)
 
     alpha_info_dict = sim_progress_resp.json()
     error, info, message = _regular_error_detector(alpha_info_dict)
@@ -1213,6 +1212,22 @@ def Single_Alpha_Simulation(
     if alpha_id: alpha_info_dict.setdefault("settings", {}).update({"type": TYPE})
     logger.info(f"SIMULATION ({account_no})({INDEX})", f"({File_Name}) {alpha_id} generated.")
     return False, alpha_info_dict
+
+"""
+The ProxyError means your Python script tried to route its request to the WorldQuant Brain API through a proxy 
+server, but that connection failed. If this code used to work perfectly, something outside of Python changed:
+
+Corporate/University Network Changes: If you recently connected to a new Wi-Fi network, a corporate VPN, or a 
+university network, these environments often force internet traffic through a proxy. If the proxy is misconfigured 
+or blocks WorldQuant, it drops the connection.
+
+System Environment Variables: The requests library automatically looks at your computer's operating system settings. 
+If an application (like a new VPN client or network tool) set the HTTP_PROXY or HTTPS_PROXY environment variables 
+on your machine, Python will suddenly start trying to use them.
+
+Proxy Server Downtime: If you always use a proxy, the proxy server itself might simply be down or overloaded right 
+now, causing it to reject your script's API requests.
+"""
 
 def simulate_and_evaluate_alpha(
     alpha_settings,
